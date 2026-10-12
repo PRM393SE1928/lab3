@@ -1,18 +1,18 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
-import '../../features/home/screens/home_screen.dart';
-import '../../features/food_diary/screens/diary_screen.dart';
+import '../../features/food_diary/models/meal.dart';
 import '../../features/food_diary/screens/add_meal_screen.dart';
+import '../../features/food_diary/screens/diary_screen.dart';
+import '../../features/home/screens/home_screen.dart';
+import '../../features/knowledge/models/article.dart';
+import '../../features/knowledge/screens/article_detail_screen.dart';
+import '../../features/knowledge/screens/knowledge_screen.dart';
 import '../../features/meal_evaluation/screens/meal_result_screen.dart';
 import '../../features/meal_evaluation/screens/suggestions_screen.dart';
-import '../../features/knowledge/screens/knowledge_screen.dart';
-import '../../features/knowledge/screens/article_detail_screen.dart';
-import '../../features/user_progress/screens/progress_screen.dart';
 import '../../features/user_progress/screens/profile_screen.dart';
+import '../../features/user_progress/screens/progress_screen.dart';
 import '../../features/user_progress/screens/settings_screen.dart';
-import '../../features/food_diary/models/meal.dart';
-import '../../features/knowledge/models/article.dart';
 
 class AppRouter {
   static final router = GoRouter(
@@ -70,6 +70,7 @@ class AppRouter {
 
 class InvalidRouteScreen extends StatelessWidget {
   const InvalidRouteScreen({super.key, required this.message});
+
   final String message;
 
   @override
@@ -96,7 +97,9 @@ class InvalidRouteScreen extends StatelessWidget {
 
 class AppShell extends StatelessWidget {
   const AppShell({super.key, required this.child});
+
   final Widget child;
+
   @override
   Widget build(BuildContext context) {
     final location = GoRouterState.of(context).uri.path;

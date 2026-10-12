@@ -5,7 +5,14 @@ class Article {
     required this.topic,
     required this.summary,
     required this.content,
+    required this.readMinutes,
   });
-  final String id, title, topic, summary, content;
+
+  final String id;
+  final String title;
+  final String topic;
+  final String summary;
+  final String content;
+  final int readMinutes;
   bool isRead = false;
 }

@@ -14,6 +14,7 @@ class HomeScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     final state = context.watch<AppState>();
     final now = DateTime.now();
+
     return Scaffold(
       appBar: AppBar(
         title: const Text(
@@ -32,7 +33,7 @@ class HomeScreen extends StatelessWidget {
         padding: const EdgeInsets.fromLTRB(20, 8, 20, 32),
         children: [
           Text(
-            'Chào buổi sáng, ${state.profile.name.split(' ').first}!',
+            'Chào bạn, ${state.profile.name.split(' ').first}!',
             style: Theme.of(context).textTheme.headlineSmall
                 ?.copyWith(fontWeight: FontWeight.w800),
           ),
@@ -49,19 +50,19 @@ class HomeScreen extends StatelessWidget {
                   backgroundColor: AppColors.paleGreen,
                   child: Icon(Icons.spa_outlined, color: AppColors.deepGreen),
                 ),
-                SizedBox(width: 16),
+                const SizedBox(width: 16),
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(
+                      const Text(
                         'Điểm ăn uống hôm nay',
                         style: TextStyle(color: Colors.black54),
                       ),
-                      SizedBox(height: 4),
+                      const SizedBox(height: 4),
                       Text(
-                        '${state.weeklyScore} / 100',
-                        style: TextStyle(
+                        '${state.todayScore} / 100',
+                        style: const TextStyle(
                           fontSize: 28,
                           fontWeight: FontWeight.w800,
                         ),
@@ -153,6 +154,7 @@ String _weekday(int value) => [
   'Thứ Bảy',
   'Chủ Nhật',
 ][value];
+
 String _month(int value) => [
   '',
   'tháng 1',
@@ -168,10 +170,10 @@ String _month(int value) => [
   'tháng 11',
   'tháng 12',
 ][value];
-String _emoji(MealType type) => type == MealType.breakfast
-    ? '☀️'
-    : type == MealType.lunch
-    ? '🥗'
-    : type == MealType.dinner
-    ? '🍲'
-    : '🍎';
+
+String _emoji(MealType type) => switch (type) {
+  MealType.breakfast => '☀️',
+  MealType.lunch => '🥗',
+  MealType.dinner => '🍲',
+  MealType.snack => '🍎',
+};

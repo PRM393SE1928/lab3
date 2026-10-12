@@ -22,7 +22,7 @@ void main() {
     expect(find.text('Về trang chủ'), findsOneWidget);
   });
 
-  testWidgets('keeps unimplemented settings disabled', (tester) async {
+  testWidgets('settings toggles are available', (tester) async {
     await tester.pumpWidget(const LongevaApp());
     AppRouter.router.go('/settings');
     await tester.pumpAndSettle();
@@ -30,8 +30,8 @@ void main() {
     final switches = tester.widgetList<SwitchListTile>(
       find.byType(SwitchListTile),
     );
-    expect(switches, hasLength(2));
-    expect(switches.every((item) => item.onChanged == null), isTrue);
-    expect(find.text('Chưa triển khai trong bản demo này'), findsNWidgets(2));
+    expect(switches, hasLength(4));
+    expect(switches.every((item) => item.onChanged != null), isTrue);
+    expect(find.text('Nhắc nhở hằng ngày'), findsOneWidget);
   });
 }

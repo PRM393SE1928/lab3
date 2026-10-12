@@ -5,5 +5,9 @@ class FoodItem {
     required this.category,
     this.emoji = '🥗',
   });
-  final String id, name, category, emoji;
+
+  final String id;
+  final String name;
+  final String category;
+  final String emoji;
 }
