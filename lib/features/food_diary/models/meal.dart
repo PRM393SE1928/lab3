@@ -18,6 +18,7 @@ class Meal {
     required this.date,
     required this.items,
   });
+
   final String id;
   final MealType type;
   final DateTime date;

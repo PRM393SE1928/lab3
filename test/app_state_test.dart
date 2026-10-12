@@ -40,12 +40,13 @@ void main() {
     ]);
     final evaluation = state.evaluateMeal(meal);
 
-    expect(evaluation.score, 82);
+    expect(evaluation.score, 96);
     expect(state.lastEvaluation, same(evaluation));
     expect(state.evaluationFor(meal), same(evaluation));
-    expect(state.weeklyScore, 74);
-    expect(state.weeklyScores.last, 74);
-    expect(state.streakDays, 1);
+    expect(state.weeklyScore, 76);
+    expect(state.weeklyScores.last, 80);
+    expect(state.todayScore, 80);
+    expect(state.streakDays, 2);
   });
 
   test('marks known articles once and ignores unknown articles', () {
@@ -59,5 +60,28 @@ void main() {
   test('updates profile through AppState', () {
     state.updateProfileName('Alex');
     expect(state.profile.name, 'Alex');
+    state.updateProfile(
+      name: 'Alex Nguyen',
+      email: 'alex@example.com',
+      goal: 'Eat more plants',
+      dietaryFocus: 'Beans and vegetables',
+      targetScore: 90,
+    );
+    expect(state.profile.email, 'alex@example.com');
+    expect(state.profile.targetScore, 90);
+  });
+
+  test('updates notification settings through AppState', () {
+    state.updateNotificationSettings(
+      dailyReminders: false,
+      weeklySummary: false,
+      progressNotifications: false,
+      compactDiary: true,
+    );
+
+    expect(state.dailyRemindersEnabled, isFalse);
+    expect(state.weeklySummaryEnabled, isFalse);
+    expect(state.progressNotificationsEnabled, isFalse);
+    expect(state.compactDiaryEnabled, isTrue);
   });
 }
