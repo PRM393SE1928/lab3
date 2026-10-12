@@ -1,4 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
+import 'package:mobile_app_lab_2/features/food_diary/models/food_item.dart';
 import 'package:mobile_app_lab_2/features/food_diary/models/meal.dart';
 import 'package:mobile_app_lab_2/shared/services/app_state.dart';
 import 'package:mobile_app_lab_2/shared/services/mock_repository.dart';
@@ -13,10 +14,11 @@ void main() {
   test('adds, updates and deletes meals through the shared contract', () {
     final initialCount = state.meals.length;
     final meal = state.addMeal(MealType.dinner, [state.foods[2]]);
+    final snack = state.foods.firstWhere((food) => food.id == 'nuts');
 
     expect(state.meals, hasLength(initialCount + 1));
     expect(meal.items, hasLength(1));
-    expect(state.updateMeal(meal.id, MealType.snack, [state.foods[3]]), isTrue);
+    expect(state.updateMeal(meal.id, MealType.snack, [snack]), isTrue);
     expect(state.meals.last.type, MealType.snack);
     expect(state.meals.last.items.single.id, 'nuts');
     expect(state.deleteMeal(meal.id), isTrue);
@@ -43,8 +45,8 @@ void main() {
     expect(evaluation.score, 82);
     expect(state.lastEvaluation, same(evaluation));
     expect(state.evaluationFor(meal), same(evaluation));
-    expect(state.weeklyScore, 74);
-    expect(state.weeklyScores.last, 74);
+    expect(state.weeklyScore, 82);
+    expect(state.weeklyScores.last, 82);
     expect(state.streakDays, 1);
   });
 
@@ -59,5 +61,59 @@ void main() {
   test('updates profile through AppState', () {
     state.updateProfileName('Alex');
     expect(state.profile.name, 'Alex');
+  });
+
+  test('filters meals by date and safely resolves unknown IDs', () {
+    final yesterday = DateTime.now().subtract(const Duration(days: 1));
+    final meal = state.addMeal(
+      MealType.snack,
+      [state.foods[3]],
+      date: yesterday,
+      note: 'Ăn nhẹ',
+    );
+
+    expect(state.getMealsForDate(yesterday), contains(meal));
+    expect(state.getMealsForDate(DateTime.now()), isNot(contains(meal)));
+    expect(state.getMealById(meal.id), same(meal));
+    expect(state.getMealById('missing'), isNull);
+    expect(meal.note, 'Ăn nhẹ');
+  });
+
+  test('clears a saved evaluation when meal contents change', () {
+    final meal = state.addMeal(MealType.dinner, [state.foods[2]]);
+    state.evaluateMeal(meal);
+    expect(state.savedEvaluationFor(meal), isNotNull);
+
+    state.updateMeal(meal.id, MealType.dinner, [state.foods[4]]);
+
+    expect(state.savedEvaluationFor(state.getMealById(meal.id)!), isNull);
+  });
+
+  test('provides exactly 50 unique foods in the required categories', () {
+    final foods = state.foods;
+    final categoryCounts = <String, int>{};
+    for (final food in foods) {
+      categoryCounts[food.category] = (categoryCounts[food.category] ?? 0) + 1;
+    }
+
+    expect(foods, hasLength(50));
+    expect(foods.map((food) => food.id).toSet(), hasLength(50));
+    expect(categoryCounts, {
+      'breakfast': 12,
+      'lunch': 15,
+      'dinner': 15,
+      'snack': 8,
+    });
+    expect(foods.every((food) => food.sourceType == 'adapted'), isTrue);
+  });
+
+  test('normalizes Vietnamese accents for food search', () {
+    expect(normalizeFoodText('yen mach'), contains('yen mach'));
+    expect(filterFoodItems(state.foods, query: 'yen mach'), isNotEmpty);
+    expect(filterFoodItems(state.foods, category: 'breakfast'), hasLength(12));
+    expect(
+      filterFoodItems(state.foods, category: 'lunch', query: 'yen mach'),
+      isEmpty,
+    );
   });
 }
