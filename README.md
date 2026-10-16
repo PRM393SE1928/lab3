@@ -29,7 +29,7 @@ Use an Android emulator or connected Android device. The app starts with seeded 
 
 `AppState` is the only in-memory source of truth for meals, evaluations, articles, profile data, and progress. Screens must use its methods instead of mutating model lists or model fields directly. `AppRepository` is the read boundary for seed/catalog data; `MockRepository` is the current implementation and can later be replaced without changing feature screens.
 
-The demo score rule is `58 + 12 * number of food items`, clamped to `0..100`. Weekly score is the rounded average of scores for meals logged in the last seven calendar days. Streak is the number of consecutive calendar days with at least one meal, ending today; it is `0` when there is no meal today. Updating a meal clears its saved evaluation, and deleting a meal removes its evaluation.
+Meal Score now uses four explicit food-group criteria (0..25 points each); see [Member 2 integration and rules](docs/member2_meal_evaluation.md). Weekly score is the rounded average of scores for meals logged in the last seven calendar days. Streak is the number of consecutive calendar days with at least one meal, ending today; it is `0` when there is no meal today. Updating a meal clears its saved evaluation, and deleting a meal removes its evaluation.
 
 Data is process-local only. There is no backend, database, authentication, notification scheduler, or persistence across app restarts.
 
@@ -45,9 +45,10 @@ Shared contracts are in `core`, `shared/services/app_state.dart`, and the featur
 
 | Route | Data contract |
 | --- | --- |
-| `/`, `/diary`, `/learn`, `/progress`, `/suggestions`, `/profile`, `/settings` | No route data |
+| `/`, `/diary`, `/learn`, `/progress`, `/profile`, `/settings` | No route data |
 | `/add-meal` | Optional `extra: Meal`; `null` opens create mode, a `Meal` opens edit mode |
 | `/meal-result` | Required `extra: Meal` |
+| `/suggestions` | Optional `extra: Meal`; otherwise latest evaluated meal |
 | `/article` | Required `extra: Article` |
 
 Invalid or missing required `extra` values show a safe error screen. No route currently uses path parameters or query parameters.
@@ -61,3 +62,8 @@ The settings switches are intentionally disabled and labeled as not implemented 
 Before parallel work, keep changes to feature-owned folders where possible. Changes to `AppState`, `AppRepository`, models, or `app_router.dart` are shared-contract changes and should be coordinated first. Each member should run `flutter analyze` and `flutter test` before merging.
 
 Future work can replace `MockRepository` with a repository implementation backed by an API or local persistence, add production error/loading handling, review accessibility and localization, and define the nutrition evaluation contract with appropriate non-medical product language.
+
+## Android mobile
+
+Xem [hướng dẫn chạy Android và xuất APK](docs/android_mobile.md).
+Phần đổi món dùng màn hình toàn màn hình với vùng chọn cuộn và nút xác nhận cố định.

@@ -50,7 +50,14 @@ class AppRouter {
       ),
       GoRoute(
         path: '/suggestions',
-        builder: (_, _) => const SuggestionsScreen(),
+        builder: (_, state) {
+          final extra = state.extra;
+          if (extra == null) return const SuggestionsScreen();
+          if (extra is Meal) return SuggestionsScreen(mealId: extra.id);
+          return const InvalidRouteScreen(
+            message: 'Không thể mở gợi ý cho bữa ăn này.',
+          );
+        },
       ),
       GoRoute(
         path: '/article',
