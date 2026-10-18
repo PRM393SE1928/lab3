@@ -16,10 +16,11 @@ Longeva is a Flutter base app for students living away from home who want to bui
 flutter pub get
 flutter analyze
 flutter test
-flutter run
+flutter emulators --launch flutter_android_36
+flutter run -d emulator-5554
 ```
 
-Use an Android emulator or connected Android device. The app starts with seeded meals and articles; changes persist only while the app process is running.
+Use the `Longeva (Android emulator)` launch configuration in VS Code, or run the commands above. Do not select Chrome or Edge as the Flutter device. If `emulator-5554` is reported as offline, close the emulator, restart Android Studio's AVD, and wait until `adb devices` reports `emulator-5554 device` before running the app. The app starts with seeded meals and articles; changes persist only while the app process is running.
 
 ## Structure
 
