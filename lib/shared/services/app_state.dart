@@ -51,28 +51,57 @@ class AppState extends ChangeNotifier {
       final dayMeals = meals
           .where((meal) => _dateOnly(meal.date) == date)
           .toList();
-      if (dayMeals.isEmpty) return 0;
-      final total = dayMeals
-          .map((meal) => evaluationFor(meal).score)
-          .reduce((a, b) => a + b);
-      return (total / dayMeals.length).round();
+      final scores = dayMeals
+          .map(savedEvaluationFor)
+          .whereType<MealEvaluation>()
+          .map((evaluation) => evaluation.score)
+          .toList();
+      if (scores.isEmpty) return 0;
+      return (scores.reduce((a, b) => a + b) / scores.length).round();
     });
   }
 
-  Meal addMeal(MealType type, List<FoodItem> items) {
+  List<Meal> getMealsForDate(DateTime date) {
+    final day = _dateOnly(date);
+    return meals.where((meal) => _dateOnly(meal.date) == day).toList()
+      ..sort((a, b) => a.date.compareTo(b.date));
+  }
+
+  Meal? getMealById(String mealId) {
+    for (final meal in meals) {
+      if (meal.id == mealId) return meal;
+    }
+    return null;
+  }
+
+  MealEvaluation? savedEvaluationFor(Meal meal) => _evaluations[meal.id];
+
+  Meal addMeal(
+    MealType type,
+    List<FoodItem> items, {
+    DateTime? date,
+    String? note,
+  }) {
     _validateItems(items);
     final meal = Meal(
       id: DateTime.now().microsecondsSinceEpoch.toString(),
       type: type,
-      date: DateTime.now(),
+      date: date ?? DateTime.now(),
       items: List.of(items),
+      note: _cleanNote(note),
     );
     meals.add(meal);
     notifyListeners();
     return meal;
   }
 
-  bool updateMeal(String mealId, MealType type, List<FoodItem> items) {
+  bool updateMeal(
+    String mealId,
+    MealType type,
+    List<FoodItem> items, {
+    DateTime? date,
+    String? note,
+  }) {
     _validateItems(items);
     final index = meals.indexWhere((meal) => meal.id == mealId);
     if (index < 0) return false;
@@ -80,8 +109,9 @@ class AppState extends ChangeNotifier {
     meals[index] = Meal(
       id: meal.id,
       type: type,
-      date: meal.date,
+      date: date ?? meal.date,
       items: List.of(items),
+      note: _cleanNote(note),
     );
     _evaluations.remove(mealId);
     notifyListeners();
@@ -148,4 +178,9 @@ class AppState extends ChangeNotifier {
 
   DateTime _dateOnly(DateTime value) =>
       DateTime(value.year, value.month, value.day);
+
+  String? _cleanNote(String? note) {
+    final value = note?.trim();
+    return value == null || value.isEmpty ? null : value;
+  }
 }

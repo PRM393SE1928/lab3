@@ -1,0 +1,6 @@
+{
+  "dart.flutterRunAdditionalArgs": [
+    "--device-id",
+    "emulator-5554"
+  ]
+}

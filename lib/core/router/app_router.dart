@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:provider/provider.dart';
 
 import '../../features/home/screens/home_screen.dart';
 import '../../features/food_diary/screens/diary_screen.dart';
 import '../../features/food_diary/screens/add_meal_screen.dart';
+import '../../features/food_diary/screens/meal_detail_screen.dart';
 import '../../features/meal_evaluation/screens/meal_result_screen.dart';
 import '../../features/meal_evaluation/screens/suggestions_screen.dart';
 import '../../features/knowledge/screens/knowledge_screen.dart';
@@ -13,6 +15,7 @@ import '../../features/user_progress/screens/profile_screen.dart';
 import '../../features/user_progress/screens/settings_screen.dart';
 import '../../features/food_diary/models/meal.dart';
 import '../../features/knowledge/models/article.dart';
+import '../../shared/services/app_state.dart';
 
 class AppRouter {
   static final router = GoRouter(
@@ -29,7 +32,17 @@ class AppRouter {
       ),
       GoRoute(
         path: '/add-meal',
-        builder: (_, state) {
+        builder: (context, state) {
+          final mealId = state.uri.queryParameters['mealId'];
+          if (mealId != null) {
+            final meal = context.read<AppState>().getMealById(mealId);
+            if (meal == null) {
+              return const InvalidRouteScreen(
+                message: 'Bữa ăn này không còn tồn tại.',
+              );
+            }
+            return AddMealScreen(meal: meal);
+          }
           final extra = state.extra;
           if (extra == null) return const AddMealScreen();
           if (extra is Meal) return AddMealScreen(meal: extra);
@@ -37,6 +50,11 @@ class AppRouter {
             message: 'Không thể mở dữ liệu bữa ăn.',
           );
         },
+      ),
+      GoRoute(
+        path: '/meal/:mealId',
+        builder: (_, state) =>
+            MealDetailScreen(mealId: state.pathParameters['mealId']!),
       ),
       GoRoute(
         path: '/meal-result',
