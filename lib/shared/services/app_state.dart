@@ -79,6 +79,13 @@ class AppState extends ChangeNotifier {
     }).length;
   }
 
+  int get todayMealCount => getMealsForDate(DateTime.now()).length;
+
+  int get todayEvaluatedMealCount =>
+      getMealsForDate(DateTime.now())
+          .where((meal) => savedEvaluationFor(meal) != null)
+          .length;
+
   int get readArticleCount =>
       articles.where((article) => article.isRead).length;
 
@@ -145,10 +152,9 @@ class AppState extends ChangeNotifier {
       ),
     ];
   }
-  }
 
   List<Meal> getMealsForDate(DateTime date) {
-  final day = _dateOnly(date);
+    final day = _dateOnly(date);
     return meals.where((meal) => _dateOnly(meal.date) == day).toList()
       ..sort((a, b) => a.date.compareTo(b.date));
   }
@@ -160,7 +166,14 @@ class AppState extends ChangeNotifier {
     return null;
   }
 
-  MealEvaluation? savedEvaluationFor(Meal meal) => _evaluations[meal.id];
+  MealEvaluation? savedEvaluationFor(Object mealOrId) {
+    final mealId = switch (mealOrId) {
+      Meal meal => meal.id,
+      String id => id,
+      _ => null,
+    };
+    return mealId == null ? null : _evaluations[mealId];
+  }
 
   Meal addMeal(
     MealType type,
@@ -177,7 +190,6 @@ class AppState extends ChangeNotifier {
       note: _cleanNote(note),
     );
     meals.add(meal);
-    _evaluations[meal.id] = calculateEvaluation(meal);
     notifyListeners();
     return meal;
   }
@@ -201,7 +213,8 @@ class AppState extends ChangeNotifier {
       note: _cleanNote(note),
     );
     meals[index] = updated;
-    _evaluations[mealId] = calculateEvaluation(updated);
+    // A changed meal must be evaluated again before its score is shown.
+    _evaluations.remove(mealId);
     notifyListeners();
     return true;
   }
@@ -307,7 +320,9 @@ class AppState extends ChangeNotifier {
     final date = _dateOnly(value);
     return meals
         .where((meal) => _dateOnly(meal.date) == date)
-        .map((meal) => evaluationFor(meal).score)
+        .map(savedEvaluationFor)
+        .whereType<MealEvaluation>()
+        .map((evaluation) => evaluation.score)
         .toList();
   }
 

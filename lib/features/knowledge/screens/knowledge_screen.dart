@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 
 import '../../../core/widgets/app_empty_view.dart';
 import '../../../shared/services/app_state.dart';
+import '../../food_diary/models/food_item.dart';
 import '../models/article.dart';
 
 class KnowledgeScreen extends StatefulWidget {
@@ -41,6 +42,7 @@ class _KnowledgeScreenState extends State<KnowledgeScreen> {
               hintText: 'Tìm kiến thức về ăn uống trường thọ',
               prefixIcon: Icon(Icons.search),
             ),
+            controller: _searchController,
             onChanged: (value) => setState(() => query = value),
           ),
           const SizedBox(height: 14),
@@ -60,6 +62,19 @@ class _KnowledgeScreenState extends State<KnowledgeScreen> {
               },
             ),
           ),
+          if (query.isNotEmpty || selectedTopic != 'Tất cả')
+            Align(
+              alignment: Alignment.centerRight,
+              child: TextButton.icon(
+                onPressed: () => setState(() {
+                  _searchController.clear();
+                  query = '';
+                  selectedTopic = 'Tất cả';
+                }),
+                icon: const Icon(Icons.clear),
+                label: const Text('Đặt lại bộ lọc'),
+              ),
+            ),
           const SizedBox(height: 18),
           Text(
             '${state.readArticleCount}/${state.articles.length} bài đã đọc',
@@ -77,12 +92,21 @@ class _KnowledgeScreenState extends State<KnowledgeScreen> {
     );
   }
 
+  late final TextEditingController _searchController = TextEditingController();
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
+  }
+
   bool _matchesFilter(Article article) {
-    final normalizedQuery = query.trim().toLowerCase();
+    final normalizedQuery = normalizeFoodText(query.trim());
     final matchesTopic =
         selectedTopic == 'Tất cả' || article.topic == selectedTopic;
-    final searchText = '${article.title} ${article.topic} ${article.summary}'
-        .toLowerCase();
+    final searchText = normalizeFoodText(
+      '${article.title} ${article.topic} ${article.summary} ${article.content}',
+    );
     return matchesTopic &&
         (normalizedQuery.isEmpty || searchText.contains(normalizedQuery));
   }

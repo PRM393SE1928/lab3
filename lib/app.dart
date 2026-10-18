@@ -14,6 +14,7 @@ class LongevaApp extends StatelessWidget {
     child: MaterialApp.router(
       title: 'Longeva',
       theme: AppTheme.light(),
+      debugShowCheckedModeBanner: false,
       routerConfig: AppRouter.router,
     ),
   );

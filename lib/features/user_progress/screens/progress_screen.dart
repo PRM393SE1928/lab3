@@ -75,6 +75,11 @@ class ProgressScreen extends StatelessWidget {
                       ),
                       const SizedBox(height: 6),
                       Text(
+                        '${state.todayEvaluatedMealCount}/${state.todayMealCount} bữa đã đánh giá',
+                        style: const TextStyle(color: Colors.black54),
+                      ),
+                      const SizedBox(height: 6),
+                      Text(
                         'Mục tiêu cá nhân: ${state.profile.targetScore}/100',
                         style: const TextStyle(color: Colors.black54),
                       ),

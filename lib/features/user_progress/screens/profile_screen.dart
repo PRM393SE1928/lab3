@@ -18,6 +18,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
   late final TextEditingController goalController;
   late final TextEditingController focusController;
   late double targetScore;
+  String? errorMessage;
 
   @override
   void initState() {
@@ -130,10 +131,27 @@ class _ProfileScreenState extends State<ProfileScreen> {
             ),
           ),
           const SizedBox(height: 20),
+          if (errorMessage != null) ...[
+            Text(
+              errorMessage!,
+              style: TextStyle(color: Theme.of(context).colorScheme.error),
+            ),
+            const SizedBox(height: 12),
+          ],
           AppButton(
             label: 'Lưu hồ sơ',
             icon: Icons.check,
             onPressed: () {
+              final email = emailController.text.trim();
+              if (nameController.text.trim().isEmpty) {
+                setState(() => errorMessage = 'Vui lòng nhập tên người dùng.');
+                return;
+              }
+              if (!RegExp(r'^[^@\s]+@[^@\s]+\.[^@\s]+$').hasMatch(email)) {
+                setState(() => errorMessage = 'Email chưa đúng định dạng.');
+                return;
+              }
+              setState(() => errorMessage = null);
               context.read<AppState>().updateProfile(
                 name: nameController.text,
                 email: emailController.text,

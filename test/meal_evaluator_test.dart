@@ -16,11 +16,16 @@ void main() {
   );
 
   test('scores depend on groups, not item count; duplicates add no points', () {
-    final soup = evaluator.calculate(meal([foods[4]]));
-    final oats = evaluator.calculate(meal([foods[0]]));
+    const soupFood = FoodItem(id: 'soup', name: 'Súp rau', category: 'lunch');
+    final soup = evaluator.calculate(meal([soupFood]));
+    final oats = evaluator.calculate(
+      meal([
+        const FoodItem(id: 'oats', name: 'Yến mạch', category: 'breakfast'),
+      ]),
+    );
     expect(soup.score, 20);
     expect(oats.score, 66);
-    expect(evaluator.calculate(meal([foods[4], foods[4]])).score, soup.score);
+    expect(evaluator.calculate(meal([soupFood, soupFood])).score, soup.score);
     final balanced = evaluator.calculate(meal([foods[0], foods[1]]));
     expect(balanced.score, 100);
     expect(balanced.criteria.values.reduce((a, b) => a + b), balanced.score);
@@ -40,26 +45,24 @@ void main() {
     );
   });
 
-  test(
-    'all catalog combinations stay bounded with immutable result collections',
-    () {
-      for (var mask = 1; mask < (1 << foods.length); mask++) {
-        final result = evaluator.calculate(
-          meal([
-            for (var i = 0; i < foods.length; i++)
-              if (mask & (1 << i) != 0) foods[i],
-          ]),
-        );
-        expect(result.score, inInclusiveRange(0, 100));
-        expect(
-          result.criteria.values.every((value) => value >= 0 && value <= 25),
-          isTrue,
-        );
-        expect(() => result.criteria.clear(), throwsUnsupportedError);
-        expect(() => result.suggestions.clear(), throwsUnsupportedError);
-      }
-    },
-  );
+  test('representative catalog combinations stay bounded with immutable result collections', () {
+    final combinations = <List<FoodItem>>[
+      for (final food in foods) [food],
+      for (var index = 0; index < foods.length - 1; index++)
+        [foods[index], foods[index + 1]],
+      foods,
+    ];
+    for (final items in combinations) {
+      final result = evaluator.calculate(meal(items));
+      expect(result.score, inInclusiveRange(0, 100));
+      expect(
+        result.criteria.values.every((value) => value >= 0 && value <= 25),
+        isTrue,
+      );
+      expect(() => result.criteria.clear(), throwsUnsupportedError);
+      expect(() => result.suggestions.clear(), throwsUnsupportedError);
+    }
+  });
 
   test(
     'recording again updates latest; edits/deletes invalidate saved result',

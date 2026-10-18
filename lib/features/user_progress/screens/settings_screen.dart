@@ -23,7 +23,7 @@ class SettingsScreen extends StatelessWidget {
                   contentPadding: EdgeInsets.zero,
                   title: const Text('Nhắc nhở hằng ngày'),
                   subtitle: Text(
-                    'Nhắc lúc ${state.reminderTime.format(context)}',
+                    'Lưu tùy chọn trong phiên demo · ${state.reminderTime.format(context)}',
                   ),
                   value: state.dailyRemindersEnabled,
                   onChanged: (value) =>
@@ -57,7 +57,7 @@ class SettingsScreen extends StatelessWidget {
                   contentPadding: EdgeInsets.zero,
                   title: const Text('Tóm tắt tiến độ hằng tuần'),
                   subtitle: const Text(
-                    'Hiển thị thông báo khi có tổng kết điểm và thói quen.',
+                    'Lưu tùy chọn trong phiên demo; chưa đặt lịch thông báo nền.',
                   ),
                   value: state.weeklySummaryEnabled,
                   onChanged: (value) =>
@@ -67,7 +67,7 @@ class SettingsScreen extends StatelessWidget {
                   contentPadding: EdgeInsets.zero,
                   title: const Text('Thông báo khi đạt mục tiêu'),
                   subtitle: const Text(
-                    'Báo khi điểm ngày đạt hoặc vượt mục tiêu cá nhân.',
+                    'Lưu tùy chọn trong phiên demo; chưa kết nối thông báo hệ thống.',
                   ),
                   value: state.progressNotificationsEnabled,
                   onChanged: (value) => state.updateNotificationSettings(
@@ -78,7 +78,7 @@ class SettingsScreen extends StatelessWidget {
                   contentPadding: EdgeInsets.zero,
                   title: const Text('Nhật ký thu gọn'),
                   subtitle: const Text(
-                    'Ưu tiên giao diện danh sách bữa ăn gọn hơn.',
+                    'Lưu tùy chọn trong phiên demo; áp dụng khi mở lại nhật ký.',
                   ),
                   value: state.compactDiaryEnabled,
                   onChanged: (value) =>

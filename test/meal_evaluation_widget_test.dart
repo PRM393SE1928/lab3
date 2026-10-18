@@ -64,11 +64,12 @@ void main() {
         ),
       );
       await tester.pumpAndSettle();
-      expect(state.savedEvaluationFor(meal.id)?.score, 20);
+      expect(state.savedEvaluationFor(meal.id)?.score, 0);
       await tester.scrollUntilVisible(find.text('Xem gợi ý'), 300);
       await tester.tap(find.text('Xem gợi ý'));
       await tester.pumpAndSettle();
-      expect(find.text('Bữa tối · 20/100'), findsOneWidget);
+      expect(find.text('Bữa tối'), findsOneWidget);
+      expect(find.text('0/100 điểm'), findsOneWidget);
     },
   );
 
@@ -88,7 +89,7 @@ void main() {
     evaluator.succeed();
     await tester.pumpAndSettle();
     expect(find.byKey(const Key('meal-score')), findsOneWidget);
-    expect(state.lastEvaluation?.score, 66);
+    expect(state.lastEvaluation?.score, 100);
     expect(state.evaluationFor(state.meals.first), same(state.lastEvaluation));
   });
 
@@ -112,7 +113,7 @@ void main() {
     evaluator.pending.last.completeError(Exception('offline'));
     await tester.pumpAndSettle();
     expect(state.meals.first, same(original));
-    expect(state.savedEvaluationFor(original.id)?.score, 66);
+    expect(state.savedEvaluationFor(original.id)?.score, 100);
     await tester.tap(find.text('Thử lại'));
     await tester.pump();
     expect(evaluator.inputs.last.items, hasLength(2));
@@ -165,10 +166,10 @@ void main() {
       expect(find.text('Thử lại'), findsOneWidget);
       await tester.tap(find.text('Thử lại'));
       await tester.pump();
-      expect(evaluator.inputs.last.items.single.id, 'soup');
+      expect(evaluator.inputs.last.items.single.id, state.foods[4].id);
       evaluator.succeed();
       await tester.pumpAndSettle();
-      expect(state.lastEvaluation?.score, 20);
+      expect(state.lastEvaluation?.score, 100);
     },
   );
 
@@ -208,7 +209,8 @@ void main() {
         ),
       );
       await tester.pumpAndSettle();
-      expect(find.text('${first.type.label} · 66/100'), findsOneWidget);
+      expect(find.text(first.type.label), findsOneWidget);
+      expect(find.text('100/100 điểm'), findsOneWidget);
       state.updateMeal(first.id, first.type, [state.foods[4]]);
       await tester.pumpAndSettle();
       expect(find.textContaining('Chưa có kết quả'), findsOneWidget);

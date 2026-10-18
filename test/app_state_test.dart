@@ -49,6 +49,19 @@ void main() {
     expect(state.streakDays, 1);
   });
 
+  test('does not count an unevaluated meal in progress scores', () {
+    final meal = state.addMeal(MealType.dinner, [state.foods[2]]);
+
+    expect(state.savedEvaluationFor(meal.id), isNull);
+    expect(state.todayScore, 0);
+    expect(state.weeklyScore, 0);
+
+    state.evaluateMeal(meal);
+
+    expect(state.savedEvaluationFor(meal.id), isNotNull);
+    expect(state.todayScore, greaterThan(0));
+  });
+
   test('marks known articles once and ignores unknown articles', () {
     expect(state.articles.first.isRead, isFalse);
     expect(state.markArticleRead(state.articles.first.id), isTrue);

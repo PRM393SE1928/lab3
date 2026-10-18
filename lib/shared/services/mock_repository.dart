@@ -328,6 +328,7 @@ class MockRepository implements AppRepository {
       summary:
           'Những khoảng dừng nhỏ có thể thay đổi cách cơ thể tiếp nhận bữa ăn.',
       content: 'Ăn chậm giúp các giác quan cảm nhận hương vị và cơ thể nhận biết cảm giác no. Hôm nay, hãy thử đặt đũa xuống giữa các lần gắp.',
+      readMinutes: 3,
     ),
     Article(
       id: 'a2',
@@ -335,6 +336,7 @@ class MockRepository implements AppRepository {
       topic: 'Đa dạng thực phẩm',
       summary: 'Xây dựng đĩa ăn cân bằng bằng những dấu hiệu màu sắc đơn giản.',
       content: 'Hãy hướng đến nhiều màu sắc tự nhiên trong ngày: rau xanh, đậu, ngũ cốc nguyên hạt, trái cây và rau củ. Sự đa dạng khiến lựa chọn lành mạnh trở nên hấp dẫn hơn.',
+      readMinutes: 4,
     ),
     Article(
       id: 'a3',
@@ -342,6 +344,7 @@ class MockRepository implements AppRepository {
       topic: 'Thói quen hằng ngày',
       summary: 'Một chút chuẩn bị sẽ giúp ngày mai nhẹ nhàng hơn.',
       content: 'Để trái cây đã rửa ở nơi dễ thấy, nấu thêm một phần ngũ cốc và đặt nước ở vị trí dễ lấy nhất.',
+      readMinutes: 2,
     ),
   ];
 }

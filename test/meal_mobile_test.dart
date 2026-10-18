@@ -38,16 +38,23 @@ void main() {
       await tester.pumpAndSettle();
       expect(tester.takeException(), isNull);
       expect(find.text('Đánh giá lại').hitTestable(), findsOneWidget);
-      await tester.scrollUntilVisible(find.text(foods.last.name), 100);
-      await tester.drag(find.byType(ListView), const Offset(0, -200));
-      await tester.pumpAndSettle();
-      await tester.tap(find.text(foods.last.name));
+      final targetFood = find.text(foods[10].name);
+      for (
+        var attempt = 0;
+        attempt < 12 && targetFood.evaluate().isEmpty;
+        attempt++
+      ) {
+        await tester.drag(find.byType(ListView).first, const Offset(0, -180));
+        await tester.pumpAndSettle();
+      }
+      expect(targetFood, findsOneWidget);
+      await tester.tap(targetFood);
       await tester.pumpAndSettle();
       expect(tester.takeException(), isNull);
       await tester.binding.handlePopRoute();
       await tester.pumpAndSettle();
       expect(find.byType(MealFoodEditor), findsNothing);
-      expect(foods, hasLength(5));
+      expect(foods, hasLength(50));
     });
   }
 }

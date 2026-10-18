@@ -29,6 +29,61 @@ class RuleBasedMealEvaluator implements MealEvaluator {
   @override
   Future<MealEvaluation> evaluate(Meal meal) => Future(() => calculate(meal));
 
+  Set<FoodGroup>? _groupsFromCatalogId(String id) {
+    final value = id.toLowerCase();
+    final groups = <FoodGroup>{};
+    if (value.contains('oat') ||
+        value.contains('rice') ||
+        value.contains('grain') ||
+        value.contains('barley') ||
+        value.contains('pasta') ||
+        value.contains('bread') ||
+        value.contains('cereal')) {
+      groups.add(FoodGroup.wholeGrains);
+    }
+    if (value.contains('vegetable') ||
+        value.contains('tomato') ||
+        value.contains('spinach') ||
+        value.contains('mushroom') ||
+        value.contains('broccoli') ||
+        value.contains('pumpkin') ||
+        value.contains('zucchini') ||
+        value.contains('eggplant') ||
+        value.contains('greens')) {
+      groups.add(FoodGroup.vegetables);
+    }
+    if (value.contains('banana') ||
+        value.contains('apple') ||
+        value.contains('pear') ||
+        value.contains('fruit') ||
+        value.contains('guava') ||
+        value.contains('orange') ||
+        value.contains('tangerine') ||
+        value.contains('lemon')) {
+      groups.add(FoodGroup.fruit);
+    }
+    if (value.contains('tofu') ||
+        value.contains('bean') ||
+        value.contains('chickpea') ||
+        value.contains('lentil') ||
+        value.contains('soy') ||
+        value.contains('edamame') ||
+        value.contains('hummus')) {
+      groups.add(FoodGroup.legumes);
+    }
+    if (value.contains('fish') ||
+        value.contains('salmon') ||
+        value.contains('sardine')) {
+      groups.add(FoodGroup.fish);
+    }
+    if (value.contains('nut') ||
+        value.contains('almond') ||
+        value.contains('walnut')) {
+      groups.add(FoodGroup.nuts);
+    }
+    return groups.isEmpty ? null : groups;
+  }
+
   MealEvaluation calculate(Meal meal) {
     if (meal.items.isEmpty) {
       throw const EvaluationException(
@@ -38,7 +93,7 @@ class RuleBasedMealEvaluator implements MealEvaluator {
     final groups = <FoodGroup>{};
     final unknown = <String>[];
     for (final food in meal.items) {
-      final tags = mealFoodGroups[food.id];
+      final tags = mealFoodGroups[food.id] ?? _groupsFromCatalogId(food.id);
       if (tags == null) {
         unknown.add(food.name);
       } else {

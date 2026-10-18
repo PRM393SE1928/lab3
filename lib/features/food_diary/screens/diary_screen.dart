@@ -77,8 +77,11 @@ class _DiaryScreenState extends State<DiaryScreen> {
             )
           else
             ...meals.map(
-              (meal) =>
-                  _DiaryMealTile(meal: meal, onDelete: () => _deleteMeal(meal)),
+              (meal) => _DiaryMealTile(
+                meal: meal,
+                compact: state.compactDiaryEnabled,
+                onDelete: () => _deleteMeal(meal),
+              ),
             ),
         ],
       ),
@@ -125,8 +128,13 @@ class _DiaryScreenState extends State<DiaryScreen> {
 }
 
 class _DiaryMealTile extends StatelessWidget {
-  const _DiaryMealTile({required this.meal, required this.onDelete});
+  const _DiaryMealTile({
+    required this.meal,
+    required this.compact,
+    required this.onDelete,
+  });
   final Meal meal;
+  final bool compact;
   final VoidCallback onDelete;
 
   @override
@@ -138,7 +146,10 @@ class _DiaryMealTile extends StatelessWidget {
       ),
       subtitle: Text(
         '${_timeLabel(meal.date)} • ${meal.items.map((item) => item.name).join(', ')}',
+        maxLines: compact ? 1 : 2,
+        overflow: TextOverflow.ellipsis,
       ),
+      dense: compact,
       trailing: PopupMenuButton<String>(
         tooltip: 'Thao tác',
         onSelected: (value) {
