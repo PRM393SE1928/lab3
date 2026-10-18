@@ -2,8 +2,9 @@ import 'package:flutter/material.dart';
 
 import '../../features/food_diary/models/food_item.dart';
 import '../../features/food_diary/models/meal.dart';
-import '../../features/knowledge/models/article.dart';
 import '../../features/meal_evaluation/models/meal_evaluation.dart';
+import '../../features/meal_evaluation/services/meal_evaluator.dart';
+import '../../features/knowledge/models/article.dart';
 import '../../features/user_progress/models/user_profile.dart';
 import 'app_repository.dart';
 
@@ -144,14 +145,36 @@ class AppState extends ChangeNotifier {
       ),
     ];
   }
+  }
 
-  Meal addMeal(MealType type, List<FoodItem> items) {
+  List<Meal> getMealsForDate(DateTime date) {
+  final day = _dateOnly(date);
+    return meals.where((meal) => _dateOnly(meal.date) == day).toList()
+      ..sort((a, b) => a.date.compareTo(b.date));
+  }
+
+  Meal? getMealById(String mealId) {
+    for (final meal in meals) {
+      if (meal.id == mealId) return meal;
+    }
+    return null;
+  }
+
+  MealEvaluation? savedEvaluationFor(Meal meal) => _evaluations[meal.id];
+
+  Meal addMeal(
+    MealType type,
+    List<FoodItem> items, {
+    DateTime? date,
+    String? note,
+  }) {
     _validateItems(items);
     final meal = Meal(
       id: DateTime.now().microsecondsSinceEpoch.toString(),
       type: type,
-      date: DateTime.now(),
+      date: date ?? DateTime.now(),
       items: List.of(items),
+      note: _cleanNote(note),
     );
     meals.add(meal);
     _evaluations[meal.id] = calculateEvaluation(meal);
@@ -159,7 +182,13 @@ class AppState extends ChangeNotifier {
     return meal;
   }
 
-  bool updateMeal(String mealId, MealType type, List<FoodItem> items) {
+  bool updateMeal(
+    String mealId,
+    MealType type,
+    List<FoodItem> items, {
+    DateTime? date,
+    String? note,
+  }) {
     _validateItems(items);
     final index = meals.indexWhere((meal) => meal.id == mealId);
     if (index < 0) return false;
@@ -167,8 +196,9 @@ class AppState extends ChangeNotifier {
     final updated = Meal(
       id: meal.id,
       type: type,
-      date: meal.date,
+      date: date ?? meal.date,
       items: List.of(items),
+      note: _cleanNote(note),
     );
     meals[index] = updated;
     _evaluations[mealId] = calculateEvaluation(updated);
@@ -199,33 +229,8 @@ class AppState extends ChangeNotifier {
     return true;
   }
 
-  MealEvaluation calculateEvaluation(Meal meal) {
-    final plantBonus = meal.items.where(_isPlantForward).length * 9;
-    final wholeBonus = meal.items.where(_isWholeFood).length * 7;
-    final varietyBonus = meal.items.length * 8;
-    final score = (48 + plantBonus + wholeBonus + varietyBonus)
-        .clamp(0, 100)
-        .toInt();
-
-    return MealEvaluation(
-      score: score,
-      summary: score >= 80
-          ? 'Bữa ăn này rất gần với tinh thần trường thọ: đa dạng, nhiều thực vật và cân bằng.'
-          : score >= 65
-          ? 'Bữa ăn có nền tảng tốt. Thêm rau, đậu hoặc ngũ cốc nguyên hạt sẽ giúp điểm tăng rõ hơn.'
-          : 'Bạn đã bắt đầu ghi nhận thói quen. Hãy thêm ít nhất một món thực vật hoặc nguyên hạt cho bữa sau.',
-      criteria: {
-        'Đa dạng món ăn': (52 + varietyBonus).clamp(0, 100).toInt(),
-        'Ưu tiên thực vật': (50 + plantBonus).clamp(0, 100).toInt(),
-        'Thực phẩm nguyên chất': (48 + wholeBonus).clamp(0, 100).toInt(),
-      },
-      suggestions: [
-        'Thêm một loại rau củ nhiều màu sắc vào bữa tiếp theo',
-        'Ưu tiên đậu, hạt hoặc ngũ cốc nguyên hạt để no lâu hơn',
-        'Giữ nhịp uống nước và ăn chậm để nhận biết cảm giác no',
-      ],
-    );
-  }
+  MealEvaluation calculateEvaluation(Meal meal) =>
+      const RuleBasedMealEvaluator().calculate(meal);
 
   MealEvaluation evaluateMeal(Meal meal) {
     final evaluation = calculateEvaluation(meal);
@@ -243,6 +248,7 @@ class AppState extends ChangeNotifier {
 
   void recordEvaluation(String mealId, MealEvaluation evaluation) {
     if (!meals.any((meal) => meal.id == mealId)) return;
+    _evaluations.remove(mealId);
     _evaluations[mealId] = evaluation;
     notifyListeners();
   }
@@ -353,4 +359,9 @@ class AppState extends ChangeNotifier {
 
   DateTime _dateOnly(DateTime value) =>
       DateTime(value.year, value.month, value.day);
+
+  String? _cleanNote(String? note) {
+    final value = note?.trim();
+    return value == null || value.isEmpty ? null : value;
+  }
 }
