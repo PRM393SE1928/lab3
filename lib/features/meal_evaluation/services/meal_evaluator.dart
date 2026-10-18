@@ -134,14 +134,18 @@ class RuleBasedMealEvaluator implements MealEvaluator {
             ? 'Có đậu, cá hoặc hạt trong dữ liệu món.'
             : 'Chưa nhận diện đậu, cá hoặc hạt trong bữa ăn.',
       }),
-      suggestions: List.unmodifiable([
-        if (!diversity) 'Thử kết hợp thêm nhóm thực phẩm khác; thêm lại cùng một món không tăng điểm.',
-        if (plants < 2) 'Có thể chọn salad đậu, súp rau củ hoặc trái cây và hạt để đa dạng nhóm thực vật.',
-        if (!grain) 'Có thể thêm hoặc đổi sang món yến mạch trong danh mục.',
-        if (!protein)
-          'Có thể chọn salad đậu, cá hồi hoặc hạt để bổ sung nhóm đạm.',
-        if (score == 100) 'Bữa ăn đã đạt đủ tiêu chí hiện tại; không cần thêm món để tăng điểm.',
-      ]),
+      suggestions: List.unmodifiable(
+        score == 100
+            ? const <String>[]
+            : [
+                if (!diversity) 'Thử kết hợp thêm nhóm thực phẩm khác; thêm lại cùng một món không tăng điểm.',
+                if (plants < 2) 'Có thể chọn salad đậu, súp rau củ hoặc trái cây và hạt để đa dạng nhóm thực vật.',
+                if (!grain)
+                  'Có thể thêm hoặc đổi sang món yến mạch trong danh mục.',
+                if (!protein)
+                  'Có thể chọn salad đậu, cá hồi hoặc hạt để bổ sung nhóm đạm.',
+              ],
+      ),
       warnings: List.unmodifiable([
         if (unknown.isNotEmpty)
           'Chưa có dữ liệu nhóm cho: ${unknown.join(', ')}. Điểm tạm tính chỉ dựa trên món đã nhận diện.',

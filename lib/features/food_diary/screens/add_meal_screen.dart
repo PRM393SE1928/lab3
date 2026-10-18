@@ -5,6 +5,7 @@ import 'package:provider/provider.dart';
 import '../../../shared/services/app_state.dart';
 import '../models/food_item.dart';
 import '../models/meal.dart';
+import '../widgets/food_picker_sheet.dart';
 
 class AddMealScreen extends StatefulWidget {
   const AddMealScreen({super.key, this.meal});
@@ -19,7 +20,6 @@ class _AddMealScreenState extends State<AddMealScreen> {
   late List<FoodItem> selected;
   late DateTime date;
   late final TextEditingController noteController;
-  String query = '';
   String? errorMessage;
   bool saving = false;
 
@@ -41,18 +41,6 @@ class _AddMealScreenState extends State<AddMealScreen> {
   @override
   Widget build(BuildContext context) {
     final state = context.read<AppState>();
-    final selectedCategory = _categoryFor(type);
-    final categoryFoods = filterFoodItems(
-      state.foods,
-      category: selectedCategory,
-    );
-    final foods = filterFoodItems(categoryFoods, query: query);
-    final emptyMessage =
-        categoryFoods.isEmpty &&
-            selectedCategory != null &&
-            query.trim().isEmpty
-        ? 'Chưa có món ăn trong danh mục này'
-        : 'Không tìm thấy món ăn phù hợp';
     return Scaffold(
       appBar: AppBar(
         title: Text(widget.meal == null ? 'Thêm bữa ăn' : 'Sửa bữa ăn'),
@@ -79,6 +67,14 @@ class _AddMealScreenState extends State<AddMealScreen> {
                 .toList(),
           ),
           const SizedBox(height: 24),
+          OutlinedButton.icon(
+            onPressed: widget.meal == null
+                ? () => context.push('/analyze-meal')
+                : null,
+            icon: const Icon(Icons.camera_alt_outlined),
+            label: const Text('Phân tích từ ảnh (Demo)'),
+          ),
+          const SizedBox(height: 16),
           const Text(
             'Ngày và thời gian',
             style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700),
@@ -106,34 +102,20 @@ class _AddMealScreenState extends State<AddMealScreen> {
             ],
           ),
           const SizedBox(height: 24),
-          const Text(
-            'Món ăn',
-            style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700),
+          _SelectedMealsSection(
+            selected: selected,
+            onRemove: (food) => setState(() => selected.remove(food)),
+            onChoose: () async {
+              final result = await showFoodPicker(
+                context,
+                catalog: state.foods,
+                initialSelection: selected,
+              );
+              if (result != null && mounted) {
+                setState(() => selected = result);
+              }
+            },
           ),
-          const SizedBox(height: 8),
-          TextField(
-            decoration: const InputDecoration(
-              hintText: 'Tìm món ăn',
-              prefixIcon: Icon(Icons.search),
-            ),
-            onChanged: (value) => setState(() => query = value),
-          ),
-          const SizedBox(height: 8),
-          if (foods.isEmpty)
-            Padding(
-              padding: EdgeInsets.symmetric(vertical: 24),
-              child: Text(emptyMessage, textAlign: TextAlign.center),
-            )
-          else
-            ...foods.map(
-              (food) => CheckboxListTile(
-                value: selected.any((item) => item.id == food.id),
-                onChanged: (_) => _toggleFood(food),
-                title: Text('${food.emoji} ${food.name}'),
-                subtitle: Text(food.categoryLabel),
-                contentPadding: EdgeInsets.zero,
-              ),
-            ),
           const SizedBox(height: 16),
           TextField(
             controller: noteController,
@@ -167,17 +149,6 @@ class _AddMealScreenState extends State<AddMealScreen> {
         ],
       ),
     );
-  }
-
-  void _toggleFood(FoodItem food) {
-    setState(() {
-      final index = selected.indexWhere((item) => item.id == food.id);
-      if (index >= 0) {
-        selected.removeAt(index);
-      } else {
-        selected.add(food);
-      }
-    });
   }
 
   Future<void> _pickDate() async {
@@ -258,12 +229,63 @@ class _AddMealScreenState extends State<AddMealScreen> {
       });
     }
   }
+}
 
-  String? _categoryFor(MealType? value) => switch (value) {
-    MealType.breakfast => 'breakfast',
-    MealType.lunch => 'lunch',
-    MealType.dinner => 'dinner',
-    MealType.snack => 'snack',
-    null => null,
-  };
+class _SelectedMealsSection extends StatelessWidget {
+  const _SelectedMealsSection({
+    required this.selected,
+    required this.onRemove,
+    required this.onChoose,
+  });
+
+  final List<FoodItem> selected;
+  final ValueChanged<FoodItem> onRemove;
+  final VoidCallback onChoose;
+
+  @override
+  Widget build(BuildContext context) => Column(
+    crossAxisAlignment: CrossAxisAlignment.start,
+    children: [
+      Row(
+        children: [
+          const Expanded(
+            child: Text(
+              'Món ăn',
+              style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700),
+            ),
+          ),
+          Text(
+            '${selected.length} món',
+            style: Theme.of(context).textTheme.labelLarge,
+          ),
+        ],
+      ),
+      const SizedBox(height: 8),
+      if (selected.isEmpty)
+        const Text('Chưa chọn món nào. Hãy chọn một hoặc nhiều món.')
+      else
+        ...selected.map(
+          (food) => ListTile(
+            contentPadding: EdgeInsets.zero,
+            leading: Text(food.emoji),
+            title: Text(food.name),
+            subtitle: Text(
+              food.sourceType == 'user_entered'
+                  ? 'Món nhập thủ công'
+                  : food.categoryLabel,
+            ),
+            trailing: IconButton(
+              tooltip: 'Xóa ${food.name}',
+              onPressed: () => onRemove(food),
+              icon: const Icon(Icons.remove_circle_outline),
+            ),
+          ),
+        ),
+      OutlinedButton.icon(
+        onPressed: onChoose,
+        icon: const Icon(Icons.restaurant_menu_outlined),
+        label: Text(selected.isEmpty ? 'Chọn món ăn' : 'Chỉnh sửa món đã chọn'),
+      ),
+    ],
+  );
 }

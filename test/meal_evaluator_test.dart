@@ -29,7 +29,7 @@ void main() {
     final balanced = evaluator.calculate(meal([foods[0], foods[1]]));
     expect(balanced.score, 100);
     expect(balanced.criteria.values.reduce((a, b) => a + b), balanced.score);
-    expect(balanced.suggestions.single, contains('không cần thêm món'));
+    expect(balanced.suggestions, isEmpty);
     expect(balanced.mealId, 'test');
   });
 
@@ -80,4 +80,21 @@ void main() {
       expect(state.savedEvaluationFor(second.id), isNull);
     },
   );
+
+  test('does not save an evaluation under a different meal ID', () {
+    final state = AppState(MockRepository());
+    final meal = state.meals.first;
+    final result = const RuleBasedMealEvaluator().calculate(
+      Meal(
+        id: 'different-meal',
+        type: MealType.lunch,
+        date: DateTime(2026, 10, 12),
+        items: [FoodItem(id: 'oats', name: 'Yến mạch', category: 'breakfast')],
+      ),
+    );
+
+    state.recordEvaluation(meal.id, result);
+
+    expect(state.savedEvaluationFor(meal.id), isNull);
+  });
 }

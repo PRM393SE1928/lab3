@@ -90,6 +90,16 @@ class _MealResultScreenState extends State<MealResultScreen> {
       );
       final result = await widget.evaluator.evaluate(input);
       if (!mounted || request != _request) return;
+      if (result.mealId != null && result.mealId != source.id) {
+        throw const EvaluationException(
+          'Kết quả đánh giá không thuộc bữa ăn đang mở.',
+        );
+      }
+      if (result.score < 0 || result.score > 100) {
+        throw const EvaluationException(
+          'Kết quả đánh giá không hợp lệ. Hãy thử lại.',
+        );
+      }
       if (!identical(source, _current(state))) {
         _draft = null;
         throw const EvaluationException(

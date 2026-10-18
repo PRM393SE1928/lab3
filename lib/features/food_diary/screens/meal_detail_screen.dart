@@ -158,7 +158,11 @@ class MealDetailScreen extends StatelessWidget {
     );
     if (confirmed == true && context.mounted) {
       context.read<AppState>().deleteMeal(meal.id);
-      context.pop();
+      if (context.canPop()) {
+        context.pop();
+      } else {
+        context.go('/diary');
+      }
     }
   }
 }

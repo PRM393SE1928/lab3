@@ -261,6 +261,8 @@ class AppState extends ChangeNotifier {
 
   void recordEvaluation(String mealId, MealEvaluation evaluation) {
     if (!meals.any((meal) => meal.id == mealId)) return;
+    if (evaluation.mealId != null && evaluation.mealId != mealId) return;
+    if (evaluation.score < 0 || evaluation.score > 100) return;
     _evaluations.remove(mealId);
     _evaluations[mealId] = evaluation;
     notifyListeners();

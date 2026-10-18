@@ -8,6 +8,8 @@ import '../../features/food_diary/screens/add_meal_screen.dart';
 import '../../features/food_diary/screens/meal_detail_screen.dart';
 import '../../features/meal_evaluation/screens/meal_result_screen.dart';
 import '../../features/meal_evaluation/screens/suggestions_screen.dart';
+import '../../features/meal_evaluation/screens/meal_photo_analysis_screen.dart';
+import '../../features/meal_evaluation/services/meal_photo_analyzer.dart';
 import '../../features/knowledge/screens/knowledge_screen.dart';
 import '../../features/knowledge/screens/article_detail_screen.dart';
 import '../../features/user_progress/screens/progress_screen.dart';
@@ -50,6 +52,11 @@ class AppRouter {
             message: 'Không thể mở dữ liệu bữa ăn.',
           );
         },
+      ),
+      GoRoute(
+        path: '/analyze-meal',
+        builder: (_, _) =>
+            MealPhotoAnalysisScreen(analyzer: configuredMealPhotoAnalyzer()),
       ),
       GoRoute(
         path: '/meal/:mealId',

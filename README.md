@@ -33,6 +33,25 @@ Use the `Longeva (Android emulator)` launch configuration in VS Code, or run the
 
 Data is process-local only. There is no backend, database, authentication, notification scheduler, or persistence across app restarts.
 
+## Phân tích ảnh bữa ăn
+
+Từ màn hình thêm bữa ăn, người dùng có thể chọn ảnh từ thư viện hoặc camera.
+Chế độ mặc định là `Demo`: kết quả xác định được dùng để kiểm thử luồng UI,
+luôn hiển thị nhãn Demo và bắt buộc người dùng xác nhận/chỉnh sửa món trước khi
+lưu. Bữa ăn được lưu qua `AppState.addMeal`, sau đó dùng luồng đánh giá hiện có;
+photo analyzer không tạo một thuật toán điểm riêng.
+
+Có thể chọn provider Real bằng cấu hình lúc build:
+
+```bash
+flutter run --dart-define=MEAL_AI_MODE=real --dart-define=MEAL_AI_API_KEY=...
+```
+
+Đây chỉ là tích hợp thử nghiệm trực tiếp với endpoint AI. API key nhúng trong
+ứng dụng mobile có thể bị trích xuất, vì vậy production cần backend proxy và
+không được commit key vào source hoặc file cấu hình. Khi thiếu key, ứng dụng
+hiển thị lỗi rõ ràng và không âm thầm chuyển sang Demo.
+
 ## Team split
 
 - Member 1: `features/home` and `features/food_diary`. Own Home, diary, add/edit/delete meal flows.

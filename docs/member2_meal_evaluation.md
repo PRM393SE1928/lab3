@@ -49,7 +49,8 @@ Groups are a set: repeating dishes never increases points. Category is currently
 meal time, not nutrition; names/category strings are never used to guess nutrients.
 Unknown IDs earn no group credit and produce an explicit provisional-score warning.
 New catalog IDs require metadata here. Empty meals produce a recoverable error.
-Suggestions reflect missing criteria; a 100-point meal is not prompted to add food.
+Suggestions reflect missing criteria; a 100-point meal has an empty suggestion
+list and is not prompted to add food.
 The same rules currently apply to snacks; there is no portion-aware assessment.
 
 ## Async behavior
@@ -81,6 +82,6 @@ Run `flutter pub get`, `flutter analyze`, and `flutter test`.
 
 - `flutter pub get`: passed.
 - `flutter analyze --no-pub`: no issues.
-- `flutter test --no-pub`: all 20 tests passed, including existing app/state tests.
+- `flutter test`: all 40 tests passed, including existing app/state tests.
 - The result-to-suggestions route was tested at 360 x 800 logical pixels.
 - No new packages and no changes to Member 1/3 screens were required.
