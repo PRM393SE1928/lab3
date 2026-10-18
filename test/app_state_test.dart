@@ -60,6 +60,29 @@ void main() {
   test('updates profile through AppState', () {
     state.updateProfileName('Alex');
     expect(state.profile.name, 'Alex');
+    state.updateProfile(
+      name: 'Alex Nguyen',
+      email: 'alex@example.com',
+      goal: 'Eat more plants',
+      dietaryFocus: 'Beans and vegetables',
+      targetScore: 90,
+    );
+    expect(state.profile.email, 'alex@example.com');
+    expect(state.profile.targetScore, 90);
+  });
+
+  test('updates notification settings through AppState', () {
+    state.updateNotificationSettings(
+      dailyReminders: false,
+      weeklySummary: false,
+      progressNotifications: false,
+      compactDiary: true,
+    );
+
+    expect(state.dailyRemindersEnabled, isFalse);
+    expect(state.weeklySummaryEnabled, isFalse);
+    expect(state.progressNotificationsEnabled, isFalse);
+    expect(state.compactDiaryEnabled, isTrue);
   });
 
   test('filters meals by date and safely resolves unknown IDs', () {
