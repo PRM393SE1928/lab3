@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../features/food_diary/models/food_item.dart';
 import '../../features/food_diary/models/meal.dart';
 import '../../features/meal_evaluation/models/meal_evaluation.dart';
+import '../../features/meal_evaluation/services/meal_evaluator.dart';
 import '../../features/knowledge/models/article.dart';
 import '../../features/user_progress/models/user_profile.dart';
 import 'app_repository.dart';
@@ -21,6 +22,8 @@ class AppState extends ChangeNotifier {
 
   MealEvaluation? get lastEvaluation =>
       _evaluations.isEmpty ? null : _evaluations.values.last;
+
+  MealEvaluation? savedEvaluationFor(String mealId) => _evaluations[mealId];
 
   int get weeklyScore {
     final scores = weeklyScores.where((score) => score > 0).toList();
@@ -138,25 +141,8 @@ class AppState extends ChangeNotifier {
     return true;
   }
 
-  MealEvaluation calculateEvaluation(Meal meal) {
-    final score = (58 + meal.items.length * 12).clamp(0, 100);
-    return MealEvaluation(
-      score: score,
-      summary: score >= 70
-          ? 'Một lựa chọn bổ dưỡng với nền tảng tốt.'
-          : 'Một khởi đầu đáng ghi nhận, nhưng vẫn có thể đa dạng hơn.',
-      criteria: {
-        'Đa dạng': (score + 6).clamp(0, 100),
-        'Thực phẩm nguyên chất': (score - 4).clamp(0, 100),
-        'Cân bằng thực vật': (score + 2).clamp(0, 100),
-      },
-      suggestions: [
-        'Thêm một loại rau củ nhiều màu sắc',
-        'Uống nước cùng bữa ăn này',
-        'Thử thêm một món từ ngũ cốc nguyên hạt',
-      ],
-    );
-  }
+  MealEvaluation calculateEvaluation(Meal meal) =>
+      const RuleBasedMealEvaluator().calculate(meal);
 
   MealEvaluation evaluateMeal(Meal meal) {
     final evaluation = calculateEvaluation(meal);
@@ -169,6 +155,7 @@ class AppState extends ChangeNotifier {
 
   void recordEvaluation(String mealId, MealEvaluation evaluation) {
     if (!meals.any((meal) => meal.id == mealId)) return;
+    _evaluations.remove(mealId);
     _evaluations[mealId] = evaluation;
     notifyListeners();
   }

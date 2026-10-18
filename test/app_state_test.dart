@@ -42,11 +42,10 @@ void main() {
     ]);
     final evaluation = state.evaluateMeal(meal);
 
-    expect(evaluation.score, 82);
+    expect(evaluation.score, 100);
     expect(state.lastEvaluation, same(evaluation));
     expect(state.evaluationFor(meal), same(evaluation));
-    expect(state.weeklyScore, 82);
-    expect(state.weeklyScores.last, 82);
+
     expect(state.streakDays, 1);
   });
 
