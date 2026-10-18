@@ -16,10 +16,11 @@ Longeva is a Flutter base app for students living away from home who want to bui
 flutter pub get
 flutter analyze
 flutter test
-flutter run
+flutter emulators --launch flutter_android_36
+flutter run -d emulator-5554
 ```
 
-Use an Android emulator or connected Android device. The app starts with seeded meals and articles; changes persist only while the app process is running.
+Use the `Longeva (Android emulator)` launch configuration in VS Code, or run the commands above. Do not select Chrome or Edge as the Flutter device. If `emulator-5554` is reported as offline, close the emulator, restart Android Studio's AVD, and wait until `adb devices` reports `emulator-5554 device` before running the app. The app starts with seeded meals and articles; changes persist only while the app process is running.
 
 ## Structure
 
@@ -29,7 +30,7 @@ Use an Android emulator or connected Android device. The app starts with seeded 
 
 `AppState` is the only in-memory source of truth for meals, evaluations, articles, profile data, and progress. Screens must use its methods instead of mutating model lists or model fields directly. `AppRepository` is the read boundary for seed/catalog data; `MockRepository` is the current implementation and can later be replaced without changing feature screens.
 
-The demo score rule is `58 + 12 * number of food items`, clamped to `0..100`. Weekly score is the rounded average of scores for meals logged in the last seven calendar days. Streak is the number of consecutive calendar days with at least one meal, ending today; it is `0` when there is no meal today. Updating a meal clears its saved evaluation, and deleting a meal removes its evaluation.
+The demo evaluation rule is `58 + 12 * number of food items`, clamped to `0..100`, and is owned by the meal evaluation feature. Home and progress only display scores explicitly saved for a meal; unevaluated meals contribute `0` until a result is recorded. Weekly score is the rounded average of saved scores for meals logged in the last seven calendar days. Streak is the number of consecutive calendar days with at least one meal, ending today; it is `0` when there is no meal today. Updating a meal clears its saved evaluation, and deleting a meal removes its evaluation.
 
 Data is process-local only. There is no backend, database, authentication, notification scheduler, or persistence across app restarts.
 
@@ -46,13 +47,14 @@ Shared contracts are in `core`, `shared/services/app_state.dart`, and the featur
 | Route | Data contract |
 | --- | --- |
 | `/`, `/diary`, `/learn`, `/progress`, `/suggestions`, `/profile`, `/settings` | No route data |
-| `/add-meal` | Optional `extra: Meal`; `null` opens create mode, a `Meal` opens edit mode |
+| `/add-meal` | Optional `extra: Meal` or `?mealId=...`; no data opens create mode, a valid meal opens edit mode |
+| `/meal/:mealId` | Required meal ID; missing IDs show a safe detail state |
 | `/meal-result` | Required `extra: Meal` |
 | `/article` | Required `extra: Article` |
 
 Invalid or missing required `extra` values show a safe error screen. No route currently uses path parameters or query parameters.
 
-The expected flow is Add Meal -> Meal Result -> Suggestions. Progress reads the same meals and evaluations from `AppState`; it does not maintain a separate score list.
+The expected flow is Add Meal -> Meal Detail -> Meal Result -> Suggestions. Progress reads the same meals and saved evaluations from `AppState`; it does not maintain a separate score list.
 
 ## Next steps
 
