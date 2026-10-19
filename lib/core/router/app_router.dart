@@ -18,6 +18,7 @@ import '../../features/user_progress/screens/settings_screen.dart';
 import '../../features/food_diary/models/meal.dart';
 import '../../features/knowledge/models/article.dart';
 import '../../shared/services/app_state.dart';
+import '../../features/meal_planner/screens/meal_planner_screen.dart';
 
 class AppRouter {
   static final router = GoRouter(
@@ -30,6 +31,10 @@ class AppRouter {
           GoRoute(path: '/diary', builder: (_, _) => const DiaryScreen()),
           GoRoute(path: '/learn', builder: (_, _) => const KnowledgeScreen()),
           GoRoute(path: '/progress', builder: (_, _) => const ProgressScreen()),
+          GoRoute(
+            path: '/planner',
+            builder: (_, _) => const MealPlannerScreen(),
+          ),
         ],
       ),
       GoRoute(
@@ -96,6 +101,28 @@ class AppRouter {
       ),
       GoRoute(path: '/profile', builder: (_, _) => const ProfileScreen()),
       GoRoute(path: '/settings', builder: (_, _) => const SettingsScreen()),
+      GoRoute(
+        path: '/planner/edit',
+        builder: (context, state) {
+          final id = state.uri.queryParameters['planId'];
+          final dateText = state.uri.queryParameters['date'];
+          final plan = id == null
+              ? null
+              : context.read<AppState>().getMealPlanById(id);
+          DateTime? date;
+          if (dateText != null) date = DateTime.tryParse(dateText);
+          return MealPlanEditorScreen(plan: plan, date: date);
+        },
+      ),
+      GoRoute(
+        path: '/planner/detail/:planId',
+        builder: (_, state) =>
+            MealPlanDetailScreen(planId: state.pathParameters['planId']!),
+      ),
+      GoRoute(
+        path: '/planner/shopping',
+        builder: (_, _) => const ShoppingListScreen(),
+      ),
     ],
   );
 }
@@ -132,13 +159,19 @@ class AppShell extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final location = GoRouterState.of(context).uri.path;
-    final index = ['/', '/diary', '/learn', '/progress'].indexOf(location);
+    final index = [
+      '/',
+      '/diary',
+      '/learn',
+      '/progress',
+      '/planner',
+    ].indexOf(location);
     return Scaffold(
       body: child,
       bottomNavigationBar: NavigationBar(
         selectedIndex: index < 0 ? 0 : index,
         onDestinationSelected: (i) =>
-            context.go(['/', '/diary', '/learn', '/progress'][i]),
+            context.go(['/', '/diary', '/learn', '/progress', '/planner'][i]),
         destinations: const [
           NavigationDestination(
             icon: Icon(Icons.home_outlined),
@@ -159,6 +192,11 @@ class AppShell extends StatelessWidget {
             icon: Icon(Icons.insights_outlined),
             selectedIcon: Icon(Icons.insights),
             label: 'Tiến độ',
+          ),
+          NavigationDestination(
+            icon: Icon(Icons.calendar_month_outlined),
+            selectedIcon: Icon(Icons.calendar_month),
+            label: 'Kế hoạch',
           ),
         ],
       ),

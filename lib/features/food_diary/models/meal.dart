@@ -18,6 +18,7 @@ class Meal {
     required this.date,
     required this.items,
     this.note,
+    this.plannedMealId,
   });
 
   final String id;
@@ -25,4 +26,5 @@ class Meal {
   final DateTime date;
   final List<FoodItem> items;
   final String? note;
+  final String? plannedMealId;
 }

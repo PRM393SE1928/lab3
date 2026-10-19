@@ -7,6 +7,7 @@ import '../../../core/widgets/app_card.dart';
 import '../../../shared/services/app_state.dart';
 import '../../../shared/services/mock_content.dart';
 import '../../food_diary/models/meal.dart';
+import '../../food_diary/models/food_item.dart';
 import '../../meal_evaluation/models/meal_evaluation.dart';
 
 class HomeScreen extends StatelessWidget {
@@ -32,6 +33,11 @@ class HomeScreen extends StatelessWidget {
           style: TextStyle(fontWeight: FontWeight.w800),
         ),
         actions: [
+          IconButton(
+            tooltip: 'Meal Planner',
+            onPressed: () => context.push('/planner'),
+            icon: const Icon(Icons.calendar_month_outlined),
+          ),
           IconButton(
             tooltip: 'Hồ sơ',
             onPressed: () => context.push('/profile'),
@@ -134,6 +140,26 @@ class HomeScreen extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 26),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              const Text(
+                'Gợi ý Smart Meal Planner',
+                style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700),
+              ),
+              TextButton(
+                onPressed: () => context.push('/planner'),
+                child: const Text('Mở planner'),
+              ),
+            ],
+          ),
+          _TodayPlannerSuggestions(
+            date: DateTime.now(),
+            onAdd: (type, food) {
+              state.addMealPlan(type, [food], date: DateTime.now());
+            },
+          ),
+          const SizedBox(height: 26),
           const Text(
             'Gợi ý nhỏ cho hôm nay',
             style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700),
@@ -160,6 +186,45 @@ class HomeScreen extends StatelessWidget {
         ],
       ),
     );
+  }
+}
+
+class _TodayPlannerSuggestions extends StatelessWidget {
+  const _TodayPlannerSuggestions({required this.date, required this.onAdd});
+
+  final DateTime date;
+  final void Function(MealType type, FoodItem food) onAdd;
+
+  @override
+  Widget build(BuildContext context) {
+    final state = context.watch<AppState>();
+    final plans = state.getPlansForDate(date);
+    final children = <Widget>[];
+    for (final type in MealType.values) {
+      final food = state.suggestedFoodFor(type, date);
+      if (food == null) continue;
+      final alreadyPlanned = plans.any((item) => item.type == type);
+      children.add(
+        ListTile(
+          contentPadding: EdgeInsets.zero,
+          leading: Text(food.emoji, style: const TextStyle(fontSize: 24)),
+          title: Text(type.label),
+          subtitle: Text(
+            food.name,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+          ),
+          trailing: alreadyPlanned
+              ? const Icon(Icons.check_circle_outline)
+              : IconButton(
+                  tooltip: 'Thêm vào kế hoạch',
+                  icon: const Icon(Icons.add_circle_outline),
+                  onPressed: () => onAdd(type, food),
+                ),
+        ),
+      );
+    }
+    return AppCard(child: Column(children: children));
   }
 }
 

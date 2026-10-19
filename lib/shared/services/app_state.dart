@@ -6,6 +6,7 @@ import '../../features/meal_evaluation/models/meal_evaluation.dart';
 import '../../features/meal_evaluation/services/meal_evaluator.dart';
 import '../../features/knowledge/models/article.dart';
 import '../../features/user_progress/models/user_profile.dart';
+import '../../features/meal_planner/models/meal_plan.dart';
 import 'app_repository.dart';
 
 class DailyProgress {
@@ -48,6 +49,8 @@ class AppState extends ChangeNotifier {
   final List<Article> articles;
   final profile = UserProfile();
   final Map<String, MealEvaluation> _evaluations = {};
+  final List<MealPlan> mealPlans = [];
+  final List<ShoppingItem> shoppingItems = [];
 
   bool dailyRemindersEnabled = true;
   bool weeklySummaryEnabled = true;
@@ -180,6 +183,7 @@ class AppState extends ChangeNotifier {
     List<FoodItem> items, {
     DateTime? date,
     String? note,
+    String? plannedMealId,
   }) {
     _validateItems(items);
     final meal = Meal(
@@ -188,10 +192,190 @@ class AppState extends ChangeNotifier {
       date: date ?? DateTime.now(),
       items: List.of(items),
       note: _cleanNote(note),
+      plannedMealId: plannedMealId,
     );
     meals.add(meal);
     notifyListeners();
     return meal;
+  }
+
+  List<MealPlan> getPlansForDate(DateTime date) {
+    final day = _dateOnly(date);
+    return mealPlans.where((p) => _dateOnly(p.date) == day).toList()
+      ..sort((a, b) => a.type.index.compareTo(b.type.index));
+  }
+
+  MealPlan? getMealPlanById(String id) {
+    for (final plan in mealPlans) {
+      if (plan.id == id) return plan;
+    }
+    return null;
+  }
+
+  /// Returns a deterministic, catalog-only suggestion for the requested meal.
+  /// It does not create a plan, meal, nutrition value, or score.
+  FoodItem? suggestedFoodFor(MealType type, DateTime date) {
+    final category = switch (type) {
+      MealType.breakfast => 'breakfast',
+      MealType.lunch => 'lunch',
+      MealType.dinner => 'dinner',
+      MealType.snack => 'snack',
+    };
+    final matches = foods.where((food) => food.category == category).toList();
+    if (matches.isEmpty) return null;
+    final index = (date.day + date.month + type.index) % matches.length;
+    return matches[index];
+  }
+
+  MealPlan addMealPlan(
+    MealType type,
+    List<FoodItem> items, {
+    required DateTime date,
+    String? note,
+  }) {
+    _validateItems(items);
+    final day = _dateOnly(date);
+    final existing = mealPlans.where(
+      (p) =>
+          _dateOnly(p.date) == day &&
+          p.type == type &&
+          p.status == MealPlanStatus.planned,
+    );
+    if (existing.isNotEmpty) return existing.first;
+    final plan = MealPlan(
+      id: 'plan-${DateTime.now().microsecondsSinceEpoch}',
+      date: date,
+      type: type,
+      items: List.of(items),
+      note: _cleanNote(note),
+    );
+    mealPlans.add(plan);
+    notifyListeners();
+    return plan;
+  }
+
+  /// Adds catalog items to the planned meal for a day without creating
+  /// duplicate food entries when the confirmation is repeated.
+  MealPlan addFoodsToMealPlan(
+    MealType type,
+    Iterable<FoodItem> items, {
+    required DateTime date,
+  }) {
+    final selected = _uniqueFoods(items);
+    _validateItems(selected);
+    final day = _dateOnly(date);
+    final existing = mealPlans.where(
+      (plan) =>
+          _dateOnly(plan.date) == day &&
+          plan.type == type &&
+          plan.status == MealPlanStatus.planned,
+    );
+    if (existing.isEmpty) {
+      return addMealPlan(type, selected, date: date);
+    }
+
+    final plan = existing.first;
+    final existingIds = plan.items.map((food) => food.id).toSet();
+    final additions = selected
+        .where((food) => !existingIds.contains(food.id))
+        .toList();
+    if (additions.isNotEmpty) {
+      plan.items.addAll(additions);
+      notifyListeners();
+    }
+    return plan;
+  }
+
+  bool updateMealPlan(
+    String id,
+    MealType type,
+    List<FoodItem> items, {
+    DateTime? date,
+    String? note,
+  }) {
+    _validateItems(items);
+    final plan = getMealPlanById(id);
+    if (plan == null || plan.status == MealPlanStatus.completed) return false;
+    // Replace the immutable value while keeping the plan ID and completion link.
+    final index = mealPlans.indexOf(plan);
+    mealPlans[index] = MealPlan(
+      id: plan.id,
+      date: date ?? plan.date,
+      type: type,
+      items: List.of(items),
+      note: _cleanNote(note),
+      status: plan.status,
+      actualMealId: plan.actualMealId,
+    );
+    notifyListeners();
+    return true;
+  }
+
+  bool deleteMealPlan(String id) {
+    final before = mealPlans.length;
+    mealPlans.removeWhere((p) => p.id == id);
+    final removed = mealPlans.length != before;
+    if (removed) notifyListeners();
+    return removed;
+  }
+
+  Meal? actualMealForPlan(String planId) {
+    final plan = getMealPlanById(planId);
+    if (plan?.actualMealId == null) return null;
+    return getMealById(plan!.actualMealId!);
+  }
+
+  Meal? completeMealPlan(
+    String planId, {
+    List<FoodItem>? actualItems,
+    String? note,
+  }) {
+    final plan = getMealPlanById(planId);
+    if (plan == null) return null;
+    if (plan.actualMealId != null) return getMealById(plan.actualMealId!);
+    final meal = addMeal(
+      plan.type,
+      actualItems ?? plan.items,
+      date: plan.date,
+      note: note ?? plan.note,
+      plannedMealId: plan.id,
+    );
+    plan.status = MealPlanStatus.completed;
+    plan.actualMealId = meal.id;
+    notifyListeners();
+    return meal;
+  }
+
+  List<ShoppingItem> buildShoppingList(Iterable<MealPlan> plans) {
+    final merged = <String, ShoppingItem>{};
+    for (final plan in plans) {
+      for (final food in plan.items) {
+        // The current catalog may not have ingredient metadata. In that case
+        // keep the food name as a safe, non-quantified shopping item.
+        final ingredients = food.ingredients.isEmpty
+            ? <String>[food.name]
+            : food.ingredients;
+        for (final ingredient in ingredients) {
+          final item = ShoppingItem(ingredient);
+          merged.putIfAbsent(item.key, () => item);
+        }
+      }
+    }
+    shoppingItems
+      ..clear()
+      ..addAll(merged.values);
+    notifyListeners();
+    return List.unmodifiable(shoppingItems);
+  }
+
+  void setShoppingItemPurchased(ShoppingItem item, bool value) {
+    item.purchased = value;
+    notifyListeners();
+  }
+
+  void removeShoppingItem(ShoppingItem item) {
+    shoppingItems.remove(item);
+    notifyListeners();
   }
 
   bool updateMeal(
@@ -211,6 +395,7 @@ class AppState extends ChangeNotifier {
       date: date ?? meal.date,
       items: List.of(items),
       note: _cleanNote(note),
+      plannedMealId: meal.plannedMealId,
     );
     meals[index] = updated;
     // A changed meal must be evaluated again before its score is shown.
@@ -316,6 +501,14 @@ class AppState extends ChangeNotifier {
         'Bữa ăn cần có ít nhất một món.',
       );
     }
+  }
+
+  List<FoodItem> _uniqueFoods(Iterable<FoodItem> values) {
+    final byId = <String, FoodItem>{};
+    for (final food in values) {
+      byId[food.id] = food;
+    }
+    return byId.values.toList();
   }
 
   List<int> _scoresForDate(DateTime value) {

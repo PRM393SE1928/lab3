@@ -8,7 +8,6 @@ import '../models/meal.dart';
 
 class DiaryScreen extends StatefulWidget {
   const DiaryScreen({super.key});
-
   @override
   State<DiaryScreen> createState() => _DiaryScreenState();
 }
@@ -28,14 +27,14 @@ class _DiaryScreenState extends State<DiaryScreen> {
         ),
         actions: [
           IconButton(
-            tooltip: 'Chọn ngày',
-            onPressed: _pickDate,
+            tooltip: 'Lập kế hoạch bữa ăn',
+            onPressed: () => context.push('/planner'),
             icon: const Icon(Icons.calendar_month_outlined),
           ),
           IconButton(
-            tooltip: 'Thêm bữa ăn',
-            onPressed: () => context.push('/add-meal'),
-            icon: const Icon(Icons.add),
+            tooltip: 'Chọn ngày',
+            onPressed: _pickDate,
+            icon: const Icon(Icons.event_outlined),
           ),
         ],
       ),
@@ -68,9 +67,9 @@ class _DiaryScreenState extends State<DiaryScreen> {
                   ),
                   const SizedBox(height: 12),
                   OutlinedButton.icon(
-                    onPressed: () => context.push('/add-meal'),
-                    icon: const Icon(Icons.add),
-                    label: const Text('Thêm bữa ăn'),
+                    onPressed: () => context.push('/planner'),
+                    icon: const Icon(Icons.calendar_month_outlined),
+                    label: const Text('Mở kế hoạch bữa ăn'),
                   ),
                 ],
               ),
@@ -84,11 +83,6 @@ class _DiaryScreenState extends State<DiaryScreen> {
               ),
             ),
         ],
-      ),
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: () => context.push('/add-meal'),
-        icon: const Icon(Icons.add),
-        label: const Text('Thêm bữa ăn'),
       ),
     );
   }
@@ -153,12 +147,8 @@ class _DiaryMealTile extends StatelessWidget {
       trailing: PopupMenuButton<String>(
         tooltip: 'Thao tác',
         onSelected: (value) {
-          if (value == 'edit') {
-            context.push('/add-meal?mealId=${meal.id}');
-          }
-          if (value == 'delete') {
-            onDelete();
-          }
+          if (value == 'edit') context.push('/add-meal?mealId=${meal.id}');
+          if (value == 'delete') onDelete();
         },
         itemBuilder: (_) => const [
           PopupMenuItem(value: 'edit', child: Text('Sửa bữa ăn')),
