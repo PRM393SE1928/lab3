@@ -161,6 +161,58 @@ class _SuggestionEntry extends StatelessWidget {
   final DateTime date;
 
   @override
+  Widget build(BuildContext context) => AppCard(
+    child: Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const ListTile(
+          contentPadding: EdgeInsets.zero,
+          leading: Icon(Icons.auto_awesome_outlined),
+          title: Text(
+            'Gợi ý món ăn',
+            style: TextStyle(fontWeight: FontWeight.w800),
+          ),
+          subtitle: Text('Chọn độ tuổi và loại bữa, sau đó xác nhận để thêm.'),
+        ),
+        FilledButton.icon(
+          key: const ValueKey('open-meal-suggestions'),
+          onPressed: () => _openSuggestions(context),
+          icon: const Icon(Icons.tune),
+          label: const Text('Chọn món theo độ tuổi'),
+        ),
+      ],
+    ),
+  );
+
+  Future<void> _openSuggestions(BuildContext context) async {
+    final selection = await showMealSuggestionSheet(context, date: date);
+    if (selection == null || !context.mounted) return;
+    try {
+      context.read<AppState>().addFoodsToMealPlan(
+        selection.type,
+        selection.foods,
+        date: date,
+      );
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('${selection.foods.length} món đã thêm vào kế hoạch.'),
+        ),
+      );
+    } on ArgumentError catch (error) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Không thể thêm món: ${error.message}')),
+      );
+    }
+  }
+}
+
+// ignore: unused_element
+class _LegacySuggestionEntry extends StatelessWidget {
+  const _LegacySuggestionEntry({required this.date});
+
+  final DateTime date;
+
+  @override
   Widget build(BuildContext context) {
     final state = context.watch<AppState>();
     return AppCard(

@@ -8,18 +8,21 @@ class MockRepository implements AppRepository {
   List<FoodItem> get foods => const [
     FoodItem(
       id: 'breakfast_oat_banana_walnut',
+      ageGroups: [AgeGroup.age18To59],
       name: 'Cháo yến mạch chuối và óc chó',
       category: 'breakfast',
       emoji: '🥣',
     ),
     FoodItem(
       id: 'breakfast_wholegrain_avocado_tomato',
+      ageGroups: [AgeGroup.age18To59],
       name: 'Bánh mì nguyên cám với bơ và cà chua',
       category: 'breakfast',
       emoji: '🥑',
     ),
     FoodItem(
       id: 'breakfast_brown_rice_mushroom',
+      ageGroups: [AgeGroup.age18To59],
       name: 'Cháo gạo lứt nấm',
       category: 'breakfast',
       emoji: '🍚',
@@ -86,12 +89,14 @@ class MockRepository implements AppRepository {
     ),
     FoodItem(
       id: 'lunch_lentil_vegetable_soup',
+      ageGroups: [AgeGroup.age18To59],
       name: 'Súp đậu lăng rau củ',
       category: 'lunch',
       emoji: '🍲',
     ),
     FoodItem(
       id: 'lunch_ginger_steamed_fish_rice_greens',
+      ageGroups: [AgeGroup.age18To59],
       name: 'Cá hấp gừng, cơm và rau xanh',
       category: 'lunch',
       emoji: '🐟',
@@ -170,6 +175,7 @@ class MockRepository implements AppRepository {
     ),
     FoodItem(
       id: 'dinner_baked_salmon_lemon_vegetables',
+      ageGroups: [AgeGroup.age18To59],
       name: 'Cá hồi nướng chanh và rau củ',
       category: 'dinner',
       emoji: '🍣',
@@ -260,6 +266,7 @@ class MockRepository implements AppRepository {
     ),
     FoodItem(
       id: 'snack_guava',
+      ageGroups: [AgeGroup.age18To59],
       name: 'Ổi tươi',
       category: 'snack',
       emoji: '🍐',

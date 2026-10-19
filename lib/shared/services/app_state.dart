@@ -214,17 +214,45 @@ class AppState extends ChangeNotifier {
 
   /// Returns a deterministic, catalog-only suggestion for the requested meal.
   /// It does not create a plan, meal, nutrition value, or score.
-  FoodItem? suggestedFoodFor(MealType type, DateTime date) {
+  FoodItem? suggestedFoodFor(
+    MealType type,
+    DateTime date, {
+    AgeGroup? ageGroup,
+  }) {
     final category = switch (type) {
       MealType.breakfast => 'breakfast',
       MealType.lunch => 'lunch',
       MealType.dinner => 'dinner',
       MealType.snack => 'snack',
     };
-    final matches = foods.where((food) => food.category == category).toList();
+    final matches = foods
+        .where((food) => food.category == category)
+        .where((food) => ageGroup == null || food.ageGroups.contains(ageGroup))
+        .toList();
     if (matches.isEmpty) return null;
     final index = (date.day + date.month + type.index) % matches.length;
     return matches[index];
+  }
+
+  /// Returns only explicitly annotated catalog items. Missing metadata is
+  /// intentionally treated as unknown, never as universally suitable.
+  List<FoodItem> suggestedFoodsFor(
+    MealType type, {
+    required AgeGroup ageGroup,
+    String query = '',
+  }) {
+    final category = switch (type) {
+      MealType.breakfast => 'breakfast',
+      MealType.lunch => 'lunch',
+      MealType.dinner => 'dinner',
+      MealType.snack => 'snack',
+    };
+    return filterFoodItems(
+      foods,
+      category: category,
+      query: query,
+      ageGroup: ageGroup,
+    );
   }
 
   MealPlan addMealPlan(
