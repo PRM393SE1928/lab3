@@ -35,33 +35,6 @@ void main() {
     expect(state.deleteMeal('missing'), isFalse);
   });
 
-  test('uses one score rule for evaluation and progress', () {
-    final meal = state.addMeal(MealType.dinner, [
-      state.foods[0],
-      state.foods[1],
-    ]);
-    final evaluation = state.evaluateMeal(meal);
-
-    expect(evaluation.score, 100);
-    expect(state.lastEvaluation, same(evaluation));
-    expect(state.evaluationFor(meal), same(evaluation));
-
-    expect(state.streakDays, 1);
-  });
-
-  test('does not count an unevaluated meal in progress scores', () {
-    final meal = state.addMeal(MealType.dinner, [state.foods[2]]);
-
-    expect(state.savedEvaluationFor(meal.id), isNull);
-    expect(state.todayScore, 0);
-    expect(state.weeklyScore, 0);
-
-    state.evaluateMeal(meal);
-
-    expect(state.savedEvaluationFor(meal.id), isNotNull);
-    expect(state.todayScore, greaterThan(0));
-  });
-
   test('marks known articles once and ignores unknown articles', () {
     expect(state.articles.first.isRead, isFalse);
     expect(state.markArticleRead(state.articles.first.id), isTrue);
@@ -112,16 +85,6 @@ void main() {
     expect(state.getMealById(meal.id), same(meal));
     expect(state.getMealById('missing'), isNull);
     expect(meal.note, 'Ăn nhẹ');
-  });
-
-  test('clears a saved evaluation when meal contents change', () {
-    final meal = state.addMeal(MealType.dinner, [state.foods[2]]);
-    state.evaluateMeal(meal);
-    expect(state.savedEvaluationFor(meal), isNotNull);
-
-    state.updateMeal(meal.id, MealType.dinner, [state.foods[4]]);
-
-    expect(state.savedEvaluationFor(state.getMealById(meal.id)!), isNull);
   });
 
   test('provides exactly 50 unique foods in the required categories', () {

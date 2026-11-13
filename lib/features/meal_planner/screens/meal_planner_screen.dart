@@ -161,28 +161,72 @@ class _SuggestionEntry extends StatelessWidget {
   final DateTime date;
 
   @override
-  Widget build(BuildContext context) => AppCard(
-    child: Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        const ListTile(
-          contentPadding: EdgeInsets.zero,
-          leading: Icon(Icons.auto_awesome_outlined),
-          title: Text(
-            'Gợi ý món ăn',
-            style: TextStyle(fontWeight: FontWeight.w800),
+  Widget build(BuildContext context) {
+    final state = context.watch<AppState>();
+    return AppCard(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              const Icon(Icons.auto_awesome_outlined, size: 20),
+              const SizedBox(width: 8),
+              Text(
+                'Gợi ý món ăn',
+                style: Theme.of(context).textTheme.titleMedium
+                    ?.copyWith(fontWeight: FontWeight.w800),
+              ),
+              const Spacer(),
+              TextButton.icon(
+                key: const ValueKey('open-meal-suggestions'),
+                onPressed: () => _openSuggestions(context),
+                icon: const Icon(Icons.tune, size: 16),
+                label: const Text('Theo tuổi'),
+              ),
+            ],
           ),
-          subtitle: Text('Chọn độ tuổi và loại bữa, sau đó xác nhận để thêm.'),
+          const SizedBox(height: 6),
+          SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            child: Row(
+              children: MealType.values.map((type) {
+                final food = state.suggestedFoodFor(type, date);
+                return Padding(
+                  padding: const EdgeInsets.only(right: 8),
+                  child: ActionChip(
+                    avatar: Text(_emoji(type)),
+                    label: Text(
+                      food == null
+                          ? '${type.label}: Chưa có'
+                          : '${type.label}: ${food.name}',
+                    ),
+                    onPressed: food == null
+                        ? null
+                        : () => _addSuggestion(context, type, food),
+                  ),
+                );
+              }).toList(),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _addSuggestion(BuildContext context, MealType type, FoodItem food) {
+    try {
+      context.read<AppState>().addFoodsToMealPlan(type, [food], date: date);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Đã thêm ${food.name} vào kế hoạch (${type.label}).'),
         ),
-        FilledButton.icon(
-          key: const ValueKey('open-meal-suggestions'),
-          onPressed: () => _openSuggestions(context),
-          icon: const Icon(Icons.tune),
-          label: const Text('Chọn món theo độ tuổi'),
-        ),
-      ],
-    ),
-  );
+      );
+    } on ArgumentError catch (error) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Không thể thêm món: ${error.message}')),
+      );
+    }
+  }
 
   Future<void> _openSuggestions(BuildContext context) async {
     final selection = await showMealSuggestionSheet(context, date: date);

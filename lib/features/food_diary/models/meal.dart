@@ -19,6 +19,7 @@ class Meal {
     required this.items,
     this.note,
     this.plannedMealId,
+    this.imageUrl,
   });
 
   final String id;
@@ -27,4 +28,5 @@ class Meal {
   final List<FoodItem> items;
   final String? note;
   final String? plannedMealId;
+  final String? imageUrl;
 }

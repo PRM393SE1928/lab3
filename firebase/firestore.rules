@@ -1,0 +1,63 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function signedIn() {
+      return request.auth != null;
+    }
+
+    function ownsUser(userId) {
+      return signedIn() && request.auth.uid == userId;
+    }
+
+    match /users/{userId} {
+      allow read: if ownsUser(userId);
+      allow create: if ownsUser(userId)
+        && request.resource.data.uid == userId;
+      allow update: if ownsUser(userId)
+        && resource.data.uid == userId
+        && request.resource.data.uid == userId;
+      allow delete: if false;
+
+      match /meals/{mealId} {
+        allow read, write: if ownsUser(userId);
+      }
+      match /mealPlans/{planId} {
+        allow read, write: if ownsUser(userId);
+      }
+      match /evaluations/{evaluationId} {
+        allow read, delete: if ownsUser(userId);
+        allow create, update: if ownsUser(userId)
+          && request.resource.data.mealId == evaluationId;
+      }
+      match /aiMealAnalyses/{analysisId} {
+        allow read, delete: if ownsUser(userId);
+        allow create, update: if ownsUser(userId)
+          && request.resource.data.userId == userId
+          && request.resource.data.mealId is string;
+      }
+      match /readingProgress/{articleId} {
+        allow read, delete: if ownsUser(userId);
+        allow create, update: if ownsUser(userId)
+          && request.resource.data.articleId == articleId;
+      }
+      match /settings/{settingsId} {
+        allow read, write: if ownsUser(userId);
+      }
+      match /fcmTokens/{tokenId} {
+        allow read, delete: if ownsUser(userId);
+        allow create, update: if ownsUser(userId)
+          && request.resource.data.keys().hasOnly(['token', 'platform', 'updatedAt'])
+          && request.resource.data.token is string
+          && request.resource.data.platform is string;
+      }
+      match /shopping/{shoppingId} {
+        allow read, write: if ownsUser(userId);
+      }
+      match /health_profile/{profileId} {
+        allow read, write: if ownsUser(userId)
+          && profileId == 'current';
+      }
+    }
+  }
+}

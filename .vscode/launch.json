@@ -6,7 +6,20 @@
       "request": "launch",
       "type": "dart",
       "program": "lib/main.dart",
-      "deviceId": "emulator-5554"
+      "deviceId": "emulator-5554",
+      "toolArgs": [
+        "--dart-define=MEAL_AI_BACKEND_URL=http://10.0.2.2:51889/api/ai/meal-evaluation"
+      ]
+    },
+    {
+      "name": "Longeva (Chrome)",
+      "request": "launch",
+      "type": "dart",
+      "program": "lib/main.dart",
+      "deviceId": "chrome",
+      "toolArgs": [
+        "--dart-define=MEAL_AI_BACKEND_URL=http://localhost:51889/api/ai/meal-evaluation"
+      ]
     }
   ]
 }

@@ -44,10 +44,10 @@ void main() {
     );
   });
 
-  test('Real provider does not silently fall back without a key', () {
+  test('Backend provider does not silently fall back without an endpoint', () {
     expect(
       () =>
-          RealAiMealPhotoAnalyzer(apiKey: '')
+          BackendMealPhotoAnalyzer(endpoint: '')
               .analyze(Uint8List.fromList([1]), catalog: catalog),
       throwsA(isA<MealPhotoAnalysisException>()),
     );

@@ -1,0 +1,17 @@
+@baseUrl = http://localhost:51889
+@firebaseIdToken = replace-with-firebase-id-token
+
+### Upload a local JPEG (replace the path with a real file)
+POST {{baseUrl}}/api/meal-images
+Authorization: Bearer {{firebaseIdToken}}
+Content-Type: multipart/form-data; boundary=meal-boundary
+
+--meal-boundary
+Content-Disposition: form-data; name="image"; filename="meal.jpg"
+Content-Type: image/jpeg
+
+< ./meal.jpg
+--meal-boundary--
+
+### Missing authentication returns 401
+POST {{baseUrl}}/api/meal-images

@@ -32,9 +32,21 @@ migrate_working_dir/
 .pub/
 /build/
 /coverage/
+/backend/.availability-test-artifacts/
+/.cloudinary-build/
+/.ai-smoke/
+**/bin/
+**/obj/
 
 # Local AI configuration
 .env
+backend/**/.env
+backend/**/appsettings.*.json
+backend/**/service-account*.json
+
+# Firebase client configuration can contain project credentials and is supplied
+# locally by Firebase tooling.
+**/google-services.json
 
 # Symbolication related
 app.*.symbols

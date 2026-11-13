@@ -1,4 +1,10 @@
-# Longeva - mobile app lab 2
+# Longeva - mobile app lab 2 / lab 3 foundation
+
+> Cập nhật 06/11/2026: code hiện có Firebase Auth, lưu dữ liệu Firestore và backend
+> AI; các đoạn mô tả nền tảng mock bên dưới là tài liệu của giai đoạn cũ.
+> Màn đánh giá đã bỏ điểm số, dùng tiêu chí đối chiếu từ `longo.pdf`.
+> Tính năng mới nằm tại **Hồ sơ → Lưu hồ sơ → AI phân tích hồ sơ và gợi ý món ăn**.
+> Xem [nguồn sách, cách đánh giá và chức năng hồ sơ](docs/book-evaluation-sources.md).
 
 Longeva is a Flutter base app for students living away from home who want to build healthier eating habits. This phase contains UI flows and in-memory mock data only. It does not provide medical advice, authentication, backend services, or life-expectancy predictions.
 
@@ -33,24 +39,51 @@ Use the `Longeva (Android emulator)` launch configuration in VS Code, or run the
 
 Data is process-local only. There is no backend, database, authentication, notification scheduler, or persistence across app restarts.
 
+## Lab 3 readiness
+
+The repository now includes the Lab 3 audit and implementation traceability:
+
+- [Design traceability](docs/design-traceability.md)
+- [Architecture](docs/architecture.md)
+- [Analytics plan](docs/analytics-plan.md)
+- [Test plan](docs/test-plan.md)
+- [Design decisions](docs/design-decisions.md)
+- Firestore and Storage ownership rules in `firebase/`
+- Remote Config defaults in `firebase/remote-config-defaults.json`
+- ARTEMIS test harness scaffold in `e2e_test/`
+
+Firebase services are not claimed as configured. Before enabling them, provide a
+Firebase project, registered Android app, test account, `google-services.json`,
+and the required device/API access. The current app continues to use the
+process-local repository until a configured cloud repository is injected.
+
 ## Phân tích ảnh bữa ăn
 
 Từ màn hình thêm bữa ăn, người dùng có thể chọn ảnh từ thư viện hoặc camera.
-Chế độ mặc định là `Demo`: kết quả xác định được dùng để kiểm thử luồng UI,
-luôn hiển thị nhãn Demo và bắt buộc người dùng xác nhận/chỉnh sửa món trước khi
-lưu. Bữa ăn được lưu qua `AppState.addMeal`, sau đó dùng luồng đánh giá hiện có;
-photo analyzer không tạo một thuật toán điểm riêng.
-
-Có thể chọn provider Real bằng cấu hình lúc build:
+Ứng dụng mặc định gọi backend AI qua `MEAL_AI_BACKEND_URL`; nếu chưa cấu hình
+endpoint, ứng dụng báo lỗi rõ ràng và không giả lập kết quả AI. Chế độ `Demo`
+chỉ dùng khi bật tường minh để kiểm thử UI:
 
 ```bash
-flutter run --dart-define=MEAL_AI_MODE=real --dart-define=MEAL_AI_API_KEY=...
+flutter run --dart-define=MEAL_AI_MODE=demo
+flutter run --dart-define=MEAL_AI_BACKEND_URL=https://your-backend.example/meal-analysis
 ```
 
-Đây chỉ là tích hợp thử nghiệm trực tiếp với endpoint AI. API key nhúng trong
-ứng dụng mobile có thể bị trích xuất, vì vậy production cần backend proxy và
-không được commit key vào source hoặc file cấu hình. Khi thiếu key, ứng dụng
-hiển thị lỗi rõ ràng và không âm thầm chuyển sang Demo.
+Client gửi ảnh dạng multipart cùng loại bữa ăn tới backend, kèm Firebase ID
+token trong `Authorization: Bearer`. Backend xác thực token, gọi Gemini bằng
+secret lưu phía server, rồi trả JSON dạng:
+
+Kết quả gồm `recognizedFoods`, `visibleIngredients`, `unknownInformation`,
+`overallSummary`, `principleAnalyses`, `improvementPoints`, `suggestions`,
+`references` và `insufficientData`. Khi chưa có dữ liệu sách đã xác minh,
+`principleAnalyses` và `references` rỗng, đồng thời `insufficientData` nêu rõ
+giới hạn này; ứng dụng không tự tạo trích dẫn hoặc số trang.
+
+Flutter không nhận API key AI và không gọi trực tiếp nhà cung cấp AI. Backend
+ASP.NET Core nằm trong `backend/LongEva.Api`; cấu hình Gemini và Firebase được
+thực hiện bằng biến môi trường theo hướng dẫn trong `backend/README.md`. Không
+có tài liệu nguồn về sách “Chế độ ăn trường thọ” trong repository; không gán
+các tiêu chí hiện tại là trích dẫn chính thức của sách.
 
 ## Team split
 

@@ -21,9 +21,14 @@ class MealDetailScreen extends StatelessWidget {
         body: const Center(child: Text('Bữa ăn này không còn tồn tại.')),
       );
     }
-    final evaluation = state.savedEvaluationFor(meal);
+    final hasAiAnalysis = state.aiMealAnalysisFor(meal.id) != null;
     return Scaffold(
       appBar: AppBar(
+        leading: IconButton(
+          tooltip: 'Về trang chủ',
+          onPressed: () => context.go('/'),
+          icon: const Icon(Icons.home_outlined),
+        ),
         title: const Text('Chi tiết bữa ăn'),
         actions: [
           IconButton(
@@ -41,6 +46,19 @@ class MealDetailScreen extends StatelessWidget {
       body: ListView(
         padding: const EdgeInsets.all(20),
         children: [
+          if (meal.imageUrl != null) ...[
+            ClipRRect(
+              borderRadius: BorderRadius.circular(16),
+              child: Image.network(
+                meal.imageUrl!,
+                height: 220,
+                fit: BoxFit.cover,
+                errorBuilder: (_, _, _) =>
+                    const Text('Không thể tải ảnh bữa ăn.'),
+              ),
+            ),
+            const SizedBox(height: 20),
+          ],
           AppCard(
             child: Row(
               children: [
@@ -88,7 +106,7 @@ class MealDetailScreen extends StatelessWidget {
                         style: const TextStyle(fontSize: 24),
                       ),
                       title: Text(item.name),
-                      subtitle: Text(item.categoryLabel),
+                      subtitle: Text(meal.type.label),
                     ),
                   )
                   .toList(),
@@ -104,35 +122,19 @@ class MealDetailScreen extends StatelessWidget {
             AppCard(child: Text(meal.note!)),
           ],
           const SizedBox(height: 20),
-          if (evaluation == null)
-            FilledButton.tonalIcon(
-              onPressed: () => context.push('/meal-result', extra: meal),
-              icon: const Icon(Icons.insights_outlined),
-              label: const Text('Đánh giá bữa ăn'),
-            )
-          else ...[
-            AppCard(
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  const Text('Điểm đánh giá gần nhất'),
-                  Text(
-                    '${evaluation.score}/100',
-                    style: const TextStyle(
-                      fontSize: 20,
-                      fontWeight: FontWeight.w800,
-                    ),
-                  ),
-                ],
-              ),
+          FilledButton.tonalIcon(
+            onPressed: () => context.push('/meal-result', extra: meal),
+            icon: const Icon(Icons.insights_outlined),
+            label: Text(
+              hasAiAnalysis ? 'Xem phân tích AI' : 'Phân tích bữa ăn bằng AI',
             ),
-            const SizedBox(height: 8),
-            FilledButton.tonalIcon(
-              onPressed: () => context.push('/meal-result', extra: meal),
-              icon: const Icon(Icons.visibility_outlined),
-              label: const Text('Xem đánh giá'),
-            ),
-          ],
+          ),
+          const SizedBox(height: 10),
+          OutlinedButton.icon(
+            onPressed: () => context.push('/analyze-meal'),
+            icon: const Icon(Icons.camera_alt_outlined),
+            label: const Text('Phân tích ảnh bằng AI'),
+          ),
         ],
       ),
     );

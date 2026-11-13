@@ -8,7 +8,6 @@ import '../../../shared/services/app_state.dart';
 import '../../../shared/services/mock_content.dart';
 import '../../food_diary/models/meal.dart';
 import '../../food_diary/models/food_item.dart';
-import '../../meal_evaluation/models/meal_evaluation.dart';
 
 class HomeScreen extends StatelessWidget {
   const HomeScreen({super.key});
@@ -17,15 +16,6 @@ class HomeScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     final state = context.watch<AppState>();
     final todayMeals = state.getMealsForDate(DateTime.now());
-    final evaluations = todayMeals
-        .map(state.savedEvaluationFor)
-        .whereType<MealEvaluation>()
-        .toList();
-    final score = evaluations.isEmpty
-        ? null
-        : (evaluations.map((item) => item.score).reduce((a, b) => a + b) /
-                  evaluations.length)
-              .round();
     return Scaffold(
       appBar: AppBar(
         title: const Text(
@@ -79,21 +69,16 @@ class HomeScreen extends StatelessWidget {
                         style: const TextStyle(color: Colors.black54),
                       ),
                       const SizedBox(height: 4),
-                      Text(
-                        score == null ? 'Chưa có đánh giá' : '$score / 100',
-                        style: const TextStyle(
-                          fontSize: 28,
+                      const Text(
+                        'Phân tích bằng AI khi bạn sẵn sàng',
+                        style: TextStyle(
+                          fontSize: 16,
                           fontWeight: FontWeight.w800,
                         ),
                       ),
                     ],
                   ),
                 ),
-                if (score != null)
-                  const Icon(
-                    Icons.insights_outlined,
-                    color: AppColors.deepGreen,
-                  ),
               ],
             ),
           ),

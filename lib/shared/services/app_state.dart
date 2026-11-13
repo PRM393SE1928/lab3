@@ -2,12 +2,13 @@ import 'package:flutter/material.dart';
 
 import '../../features/food_diary/models/food_item.dart';
 import '../../features/food_diary/models/meal.dart';
-import '../../features/meal_evaluation/models/meal_evaluation.dart';
-import '../../features/meal_evaluation/services/meal_evaluator.dart';
+import '../../features/meal_evaluation/services/meal_photo_analyzer.dart';
 import '../../features/knowledge/models/article.dart';
 import '../../features/user_progress/models/user_profile.dart';
+import '../../features/user_progress/models/health_profile.dart';
 import '../../features/meal_planner/models/meal_plan.dart';
 import 'app_repository.dart';
+import 'firestore_repository.dart';
 
 class DailyProgress {
   const DailyProgress({
@@ -48,30 +49,120 @@ class AppState extends ChangeNotifier {
   final List<Meal> meals;
   final List<Article> articles;
   final profile = UserProfile();
-  final Map<String, MealEvaluation> _evaluations = {};
+  final healthProfile = HealthProfile();
+  final Map<String, MealPhotoAnalysisResult> _aiMealAnalyses = {};
   final List<MealPlan> mealPlans = [];
   final List<ShoppingItem> shoppingItems = [];
+  bool isHydrating = false;
+  String? hydrateError;
+  String? lastPersistenceError;
+  bool _disposed = false;
+
+  @override
+  void notifyListeners() {
+    if (!_disposed) super.notifyListeners();
+  }
+
+  @override
+  void dispose() {
+    _disposed = true;
+    super.dispose();
+  }
+
+  void clearPersistenceError() {
+    if (lastPersistenceError == null) return;
+    lastPersistenceError = null;
+    notifyListeners();
+  }
+
+  Future<void> hydrate() async {
+    if (repository is! FirestoreAppRepository) return;
+    isHydrating = true;
+    hydrateError = null;
+    notifyListeners();
+    try {
+      final data = await (repository as FirestoreAppRepository).loadUserData();
+      if (_disposed) return;
+      _aiMealAnalyses
+        ..clear()
+        ..addAll(data.analyses);
+      meals
+        ..clear()
+        ..addAll(data.meals);
+      mealPlans
+        ..clear()
+        ..addAll(data.plans);
+      for (final article in articles) {
+        article.isRead = data.readArticleIds.contains(article.id);
+      }
+      final authenticatedEmail = repository is FirestoreAppRepository
+          ? (repository as FirestoreAppRepository).authenticatedEmail
+          : null;
+      if (authenticatedEmail != null && authenticatedEmail.isNotEmpty) {
+        profile.email = authenticatedEmail;
+      }
+      final remoteProfile = data.profile;
+      if (remoteProfile != null) {
+        profile
+          ..name = remoteProfile.name.isEmpty
+              ? profile.name
+              : remoteProfile.name
+          ..goal = remoteProfile.goal.isEmpty
+              ? profile.goal
+              : remoteProfile.goal
+          ..dietaryFocus = remoteProfile.dietaryFocus.isEmpty
+              ? profile.dietaryFocus
+              : remoteProfile.dietaryFocus
+          ..targetScore = remoteProfile.targetScore.clamp(50, 100).toInt();
+      }
+      final remoteHealthProfile = data.healthProfile;
+      if (remoteHealthProfile != null && remoteHealthProfile.isComplete) {
+        healthProfile
+          ..age = remoteHealthProfile.age
+          ..weightKg = remoteHealthProfile.weightKg
+          ..heightCm = remoteHealthProfile.heightCm
+          ..allergies = remoteHealthProfile.allergies
+          ..dislikedFoods = remoteHealthProfile.dislikedFoods
+          ..dietaryPattern = remoteHealthProfile.dietaryPattern
+          ..updatedAt = remoteHealthProfile.updatedAt;
+      }
+      final remoteSettings = data.settings;
+      if (remoteSettings != null) {
+        dailyRemindersEnabled = remoteSettings.dailyReminders;
+        weeklySummaryEnabled = remoteSettings.weeklySummary;
+        progressNotificationsEnabled = remoteSettings.progressNotifications;
+        compactDiaryEnabled = remoteSettings.compactDiary;
+        final parts = remoteSettings.reminderTime.split(':');
+        final hour = int.tryParse(parts.first);
+        final minute = parts.length > 1 ? int.tryParse(parts[1]) : null;
+        if (hour != null &&
+            minute != null &&
+            hour >= 0 &&
+            hour < 24 &&
+            minute >= 0 &&
+            minute < 60) {
+          reminderTime = TimeOfDay(hour: hour, minute: minute);
+        }
+      }
+      shoppingItems
+        ..clear()
+        ..addAll(data.shoppingItems);
+      notifyListeners();
+    } catch (error) {
+      hydrateError = error.toString();
+      debugPrint('[Firestore] hydrate failed error=$error');
+      notifyListeners();
+    } finally {
+      isHydrating = false;
+      notifyListeners();
+    }
+  }
 
   bool dailyRemindersEnabled = true;
   bool weeklySummaryEnabled = true;
   bool progressNotificationsEnabled = true;
   bool compactDiaryEnabled = false;
   TimeOfDay reminderTime = const TimeOfDay(hour: 20, minute: 0);
-
-  MealEvaluation? get lastEvaluation =>
-      _evaluations.isEmpty ? null : _evaluations.values.last;
-
-  int get todayScore {
-    final scores = _scoresForDate(DateTime.now());
-    if (scores.isEmpty) return 0;
-    return _average(scores);
-  }
-
-  int get weeklyScore {
-    final scores = weeklyScores.where((score) => score > 0).toList();
-    if (scores.isEmpty) return 0;
-    return _average(scores);
-  }
 
   int get mealCountThisWeek {
     final today = _dateOnly(DateTime.now());
@@ -83,11 +174,6 @@ class AppState extends ChangeNotifier {
   }
 
   int get todayMealCount => getMealsForDate(DateTime.now()).length;
-
-  int get todayEvaluatedMealCount =>
-      getMealsForDate(DateTime.now())
-          .where((meal) => savedEvaluationFor(meal) != null)
-          .length;
 
   int get readArticleCount =>
       articles.where((article) => article.isRead).length;
@@ -108,17 +194,13 @@ class AppState extends ChangeNotifier {
     return streak;
   }
 
-  List<int> get weeklyScores =>
-      weeklyProgress.map((item) => item.averageScore).toList();
-
   List<DailyProgress> get weeklyProgress {
     final today = _dateOnly(DateTime.now());
     return List.generate(7, (index) {
       final date = today.subtract(Duration(days: 6 - index));
-      final scores = _scoresForDate(date);
       return DailyProgress(
         date: date,
-        averageScore: scores.isEmpty ? 0 : _average(scores),
+        averageScore: 0,
         mealCount: meals.where((meal) => _dateOnly(meal.date) == date).length,
       );
     });
@@ -132,7 +214,9 @@ class AppState extends ChangeNotifier {
     final wholeFoods = recentMeals
         .where((meal) => meal.items.any(_isWholeFood))
         .length;
-    final mindfulMeals = weeklyScores.where((score) => score >= 75).length;
+    final analyzedMeals = recentMeals
+        .where((meal) => aiMealAnalysisFor(meal.id) != null)
+        .length;
 
     return [
       HabitSummary(
@@ -148,8 +232,8 @@ class AppState extends ChangeNotifier {
         icon: Icons.grain_outlined,
       ),
       HabitSummary(
-        label: 'Ngày đạt mục tiêu',
-        value: mindfulMeals,
+        label: 'Bữa đã phân tích',
+        value: analyzedMeals,
         goal: 5,
         icon: Icons.flag_outlined,
       ),
@@ -169,14 +253,8 @@ class AppState extends ChangeNotifier {
     return null;
   }
 
-  MealEvaluation? savedEvaluationFor(Object mealOrId) {
-    final mealId = switch (mealOrId) {
-      Meal meal => meal.id,
-      String id => id,
-      _ => null,
-    };
-    return mealId == null ? null : _evaluations[mealId];
-  }
+  MealPhotoAnalysisResult? aiMealAnalysisFor(String mealId) =>
+      _aiMealAnalyses[mealId];
 
   Meal addMeal(
     MealType type,
@@ -184,6 +262,7 @@ class AppState extends ChangeNotifier {
     DateTime? date,
     String? note,
     String? plannedMealId,
+    String? imageUrl,
   }) {
     _validateItems(items);
     final meal = Meal(
@@ -193,8 +272,10 @@ class AppState extends ChangeNotifier {
       items: List.of(items),
       note: _cleanNote(note),
       plannedMealId: plannedMealId,
+      imageUrl: imageUrl,
     );
     meals.add(meal);
+    _persist(() => (repository as FirestoreAppRepository).upsertMeal(meal));
     notifyListeners();
     return meal;
   }
@@ -278,6 +359,7 @@ class AppState extends ChangeNotifier {
       note: _cleanNote(note),
     );
     mealPlans.add(plan);
+    _persist(() => (repository as FirestoreAppRepository).upsertPlan(plan));
     notifyListeners();
     return plan;
   }
@@ -309,6 +391,7 @@ class AppState extends ChangeNotifier {
         .toList();
     if (additions.isNotEmpty) {
       plan.items.addAll(additions);
+      _persist(() => (repository as FirestoreAppRepository).upsertPlan(plan));
       notifyListeners();
     }
     return plan;
@@ -335,6 +418,9 @@ class AppState extends ChangeNotifier {
       status: plan.status,
       actualMealId: plan.actualMealId,
     );
+    _persist(
+      () => (repository as FirestoreAppRepository).upsertPlan(mealPlans[index]),
+    );
     notifyListeners();
     return true;
   }
@@ -343,8 +429,21 @@ class AppState extends ChangeNotifier {
     final before = mealPlans.length;
     mealPlans.removeWhere((p) => p.id == id);
     final removed = mealPlans.length != before;
-    if (removed) notifyListeners();
+    if (removed) {
+      notifyListeners();
+      _persist(() => (repository as FirestoreAppRepository).deletePlan(id));
+    }
     return removed;
+  }
+
+  void _persist(Future<void> Function() operation) {
+    if (repository is FirestoreAppRepository) {
+      operation().catchError((error) {
+        lastPersistenceError = error.toString();
+        debugPrint('[Firestore] persistence failed error=$error');
+        notifyListeners();
+      });
+    }
   }
 
   Meal? actualMealForPlan(String planId) {
@@ -370,6 +469,7 @@ class AppState extends ChangeNotifier {
     );
     plan.status = MealPlanStatus.completed;
     plan.actualMealId = meal.id;
+    _persist(() => (repository as FirestoreAppRepository).upsertPlan(plan));
     notifyListeners();
     return meal;
   }
@@ -393,17 +493,32 @@ class AppState extends ChangeNotifier {
       ..clear()
       ..addAll(merged.values);
     notifyListeners();
+    _persist(
+      () => (repository as FirestoreAppRepository).saveShoppingList(
+        shoppingItems,
+      ),
+    );
     return List.unmodifiable(shoppingItems);
   }
 
   void setShoppingItemPurchased(ShoppingItem item, bool value) {
     item.purchased = value;
     notifyListeners();
+    _persist(
+      () => (repository as FirestoreAppRepository).saveShoppingList(
+        shoppingItems,
+      ),
+    );
   }
 
   void removeShoppingItem(ShoppingItem item) {
     shoppingItems.remove(item);
     notifyListeners();
+    _persist(
+      () => (repository as FirestoreAppRepository).saveShoppingList(
+        shoppingItems,
+      ),
+    );
   }
 
   bool updateMeal(
@@ -424,10 +539,16 @@ class AppState extends ChangeNotifier {
       items: List.of(items),
       note: _cleanNote(note),
       plannedMealId: meal.plannedMealId,
+      imageUrl: meal.imageUrl,
     );
     meals[index] = updated;
-    // A changed meal must be evaluated again before its score is shown.
-    _evaluations.remove(mealId);
+    _aiMealAnalyses.remove(mealId);
+    _persist(
+      () => (repository as FirestoreAppRepository).upsertMeal(
+        updated,
+        invalidateAnalysis: true,
+      ),
+    );
     notifyListeners();
     return true;
   }
@@ -436,7 +557,8 @@ class AppState extends ChangeNotifier {
     final removed = meals.any((meal) => meal.id == mealId);
     if (!removed) return false;
     meals.removeWhere((meal) => meal.id == mealId);
-    _evaluations.remove(mealId);
+    _aiMealAnalyses.remove(mealId);
+    _persist(() => (repository as FirestoreAppRepository).deleteMeal(mealId));
     notifyListeners();
     return true;
   }
@@ -452,33 +574,25 @@ class AppState extends ChangeNotifier {
     if (article == null || article.isRead) return false;
     article.isRead = true;
     notifyListeners();
+    _persist(
+      () => (repository as FirestoreAppRepository).saveReadingProgress(
+        articleId,
+        true,
+      ),
+    );
     return true;
   }
 
-  MealEvaluation calculateEvaluation(Meal meal) =>
-      const RuleBasedMealEvaluator().calculate(meal);
-
-  MealEvaluation evaluateMeal(Meal meal) {
-    final evaluation = calculateEvaluation(meal);
-    recordEvaluation(meal.id, evaluation);
-    return evaluation;
-  }
-
-  MealEvaluation evaluationFor(Meal meal) {
-    final existing = _evaluations[meal.id];
-    if (existing != null) return existing;
-    final evaluation = calculateEvaluation(meal);
-    _evaluations[meal.id] = evaluation;
-    return evaluation;
-  }
-
-  void recordEvaluation(String mealId, MealEvaluation evaluation) {
+  void saveAiMealAnalysis(String mealId, MealPhotoAnalysisResult result) {
     if (!meals.any((meal) => meal.id == mealId)) return;
-    if (evaluation.mealId != null && evaluation.mealId != mealId) return;
-    if (evaluation.score < 0 || evaluation.score > 100) return;
-    _evaluations.remove(mealId);
-    _evaluations[mealId] = evaluation;
+    _aiMealAnalyses[mealId] = result;
     notifyListeners();
+    _persist(
+      () => (repository as FirestoreAppRepository).saveAiMealAnalysis(
+        mealId,
+        result,
+      ),
+    );
   }
 
   void updateProfile({
@@ -488,21 +602,84 @@ class AppState extends ChangeNotifier {
     required String dietaryFocus,
     required int targetScore,
   }) {
+    final authenticatedEmail = repository is FirestoreAppRepository
+        ? (repository as FirestoreAppRepository).authenticatedEmail
+        : null;
     profile
       ..name = name.trim().isEmpty ? profile.name : name.trim()
-      ..email = email.trim().isEmpty ? profile.email : email.trim()
+      ..email = authenticatedEmail?.isNotEmpty == true
+          ? authenticatedEmail!
+          : email.trim().isEmpty
+          ? profile.email
+          : email.trim()
       ..goal = goal.trim().isEmpty ? profile.goal : goal.trim()
       ..dietaryFocus = dietaryFocus.trim().isEmpty
           ? profile.dietaryFocus
           : dietaryFocus.trim()
       ..targetScore = targetScore.clamp(50, 100).toInt();
     notifyListeners();
+    _persist(
+      () => (repository as FirestoreAppRepository).updateProfileFields(
+        displayName: profile.name,
+        email: profile.email,
+        goal: profile.goal,
+        dietaryFocus: profile.dietaryFocus,
+        targetScore: profile.targetScore,
+      ),
+    );
   }
 
   void updateProfileName(String name) {
     if (name == profile.name) return;
     profile.name = name;
     notifyListeners();
+    _persist(
+      () => (repository as FirestoreAppRepository).updateProfileFields(
+        displayName: profile.name,
+        email: profile.email,
+        goal: profile.goal,
+        dietaryFocus: profile.dietaryFocus,
+        targetScore: profile.targetScore,
+      ),
+    );
+  }
+
+  Future<void> updateHealthProfile({
+    required int age,
+    required double weightKg,
+    required int heightCm,
+    List<String> allergies = const [],
+    List<String> dislikedFoods = const [],
+    String dietaryPattern = '',
+  }) async {
+    if (age <= 0 ||
+        age > 130 ||
+        weightKg <= 0 ||
+        weightKg > 500 ||
+        heightCm <= 0 ||
+        heightCm > 300) {
+      throw ArgumentError('Thông tin sức khỏe không hợp lệ.');
+    }
+    healthProfile.setValues(
+      newAge: age,
+      newWeightKg: weightKg,
+      newHeightCm: heightCm,
+      newAllergies: allergies,
+      newDislikedFoods: dislikedFoods,
+      newDietaryPattern: dietaryPattern,
+    );
+    notifyListeners();
+    if (repository is FirestoreAppRepository) {
+      try {
+        await (repository as FirestoreAppRepository).saveHealthProfile(
+          healthProfile,
+        );
+      } catch (error) {
+        lastPersistenceError = error.toString();
+        notifyListeners();
+        rethrow;
+      }
+    }
   }
 
   void updateNotificationSettings({
@@ -519,6 +696,15 @@ class AppState extends ChangeNotifier {
     compactDiaryEnabled = compactDiary ?? compactDiaryEnabled;
     reminderTime = time ?? reminderTime;
     notifyListeners();
+    _persist(
+      () => (repository as FirestoreAppRepository).saveSettings(
+        dailyReminders: dailyRemindersEnabled,
+        weeklySummary: weeklySummaryEnabled,
+        progressNotifications: progressNotificationsEnabled,
+        compactDiary: compactDiaryEnabled,
+        reminderTime: '${reminderTime.hour}:${reminderTime.minute}',
+      ),
+    );
   }
 
   void _validateItems(List<FoodItem> items) {
@@ -537,16 +723,6 @@ class AppState extends ChangeNotifier {
       byId[food.id] = food;
     }
     return byId.values.toList();
-  }
-
-  List<int> _scoresForDate(DateTime value) {
-    final date = _dateOnly(value);
-    return meals
-        .where((meal) => _dateOnly(meal.date) == date)
-        .map(savedEvaluationFor)
-        .whereType<MealEvaluation>()
-        .map((evaluation) => evaluation.score)
-        .toList();
   }
 
   List<Meal> _mealsInLastDays(int days) {
@@ -587,12 +763,6 @@ class AppState extends ChangeNotifier {
         value.contains('hat') ||
         value.contains('oats') ||
         value.contains('nuts');
-  }
-
-  int _average(Iterable<int> values) {
-    final list = values.toList();
-    if (list.isEmpty) return 0;
-    return (list.reduce((a, b) => a + b) / list.length).round();
   }
 
   DateTime _dateOnly(DateTime value) =>

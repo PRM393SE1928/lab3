@@ -38,59 +38,24 @@ class ProgressScreen extends StatelessWidget {
           AppCard(
             child: Row(
               children: [
-                SizedBox(
-                  width: 94,
-                  height: 94,
-                  child: Stack(
-                    fit: StackFit.expand,
-                    children: [
-                      CircularProgressIndicator(
-                        value: state.todayScore / 100,
-                        strokeWidth: 10,
-                        backgroundColor: AppColors.paleGreen,
-                      ),
-                      Center(
-                        child: Text(
-                          '${state.todayScore}',
-                          style: const TextStyle(
-                            fontSize: 28,
-                            fontWeight: FontWeight.w800,
-                          ),
-                        ),
-                      ),
-                    ],
+                const CircleAvatar(
+                  radius: 34,
+                  backgroundColor: AppColors.paleGreen,
+                  child: Icon(
+                    Icons.auto_awesome_outlined,
+                    color: AppColors.deepGreen,
+                    size: 32,
                   ),
                 ),
                 const SizedBox(width: 18),
                 Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const Text(
-                        'Điểm hôm nay',
-                        style: TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.w800,
-                        ),
-                      ),
-                      const SizedBox(height: 6),
-                      Text(
-                        '${state.todayEvaluatedMealCount}/${state.todayMealCount} bữa đã đánh giá',
-                        style: const TextStyle(color: Colors.black54),
-                      ),
-                      const SizedBox(height: 6),
-                      Text(
-                        'Mục tiêu cá nhân: ${state.profile.targetScore}/100',
-                        style: const TextStyle(color: Colors.black54),
-                      ),
-                      const SizedBox(height: 10),
-                      LinearProgressIndicator(
-                        value: state.profile.targetScore == 0
-                            ? 0
-                            : (state.todayScore / state.profile.targetScore)
-                                  .clamp(0.0, 1.0),
-                      ),
-                    ],
+                  child: Text(
+                    '${state.todayMealCount} bữa ăn hôm nay. '
+                    'Phân tích bằng AI để nhận nhận xét và gợi ý cụ thể.',
+                    style: const TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w700,
+                    ),
                   ),
                 ),
               ],
@@ -101,17 +66,17 @@ class ProgressScreen extends StatelessWidget {
             children: [
               Expanded(
                 child: _StatCard(
-                  value: '${state.weeklyScore}',
-                  label: 'Điểm tuần',
-                  icon: Icons.insights_outlined,
+                  value: '${state.mealCountThisWeek}',
+                  label: 'Bữa tuần này',
+                  icon: Icons.restaurant_menu_outlined,
                 ),
               ),
               const SizedBox(width: 10),
               Expanded(
                 child: _StatCard(
-                  value: '${state.mealCountThisWeek}',
-                  label: 'Bữa tuần này',
-                  icon: Icons.restaurant_menu_outlined,
+                  value: '${state.todayMealCount}',
+                  label: 'Bữa hôm nay',
+                  icon: Icons.today_outlined,
                 ),
               ),
               const SizedBox(width: 10),

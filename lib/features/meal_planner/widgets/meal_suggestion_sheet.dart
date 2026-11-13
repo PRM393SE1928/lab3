@@ -1,9 +1,12 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 
 import '../../../shared/services/app_state.dart';
 import '../../food_diary/models/food_item.dart';
 import '../../food_diary/models/meal.dart';
+import '../../user_progress/services/health_profile_recommender.dart';
+import '../../user_progress/services/ai_meal_recommendation_service.dart';
 
 class MealSuggestionSelection {
   const MealSuggestionSelection({required this.type, required this.foods});
@@ -50,17 +53,83 @@ class _MealSuggestionSheetState extends State<MealSuggestionSheet> {
   late AgeGroup _ageGroup;
   String _query = '';
   final Set<String> _selectedIds = {};
+  PersonalizedMealSuggestion? _remoteSuggestion;
+  String? _remoteError;
+  bool _remoteLoading = false;
+  int _requestId = 0;
+  late final _recommendations = AiMealRecommendationService();
+
+  @override
+  void dispose() {
+    _requestId++;
+    _recommendations.dispose();
+    super.dispose();
+  }
 
   @override
   void initState() {
     super.initState();
-    _type = widget.initialType;
-    _ageGroup = widget.initialAgeGroup ?? AgeGroup.age18To59;
+    _type = widget.initialType ?? MealType.breakfast;
+    _ageGroup =
+        widget.initialAgeGroup ??
+        context.read<AppState>().healthProfile.ageGroup ??
+        AgeGroup.age18To59;
+    _loadRemoteSuggestion();
+  }
+
+  Future<void> _loadRemoteSuggestion() async {
+    final requestId = ++_requestId;
+    final state = context.read<AppState>();
+    final type = _type;
+    if (type == null) return;
+    setState(() {
+      _remoteLoading = true;
+      _remoteSuggestion = null;
+      _remoteError = null;
+    });
+    try {
+      final suggestion = await _recommendations.recommend(
+        profile: state.healthProfile,
+        foods: state.foods,
+        mealType: type,
+        targetAgeGroup: _ageGroup,
+      );
+      if (!mounted || requestId != _requestId) return;
+      setState(() {
+        _remoteSuggestion = suggestion;
+        _remoteLoading = false;
+      });
+    } on AiRecommendationException catch (error) {
+      if (mounted && requestId == _requestId) {
+        setState(() {
+          _remoteError = error.message;
+          _remoteLoading = false;
+        });
+      }
+    } catch (_) {
+      if (mounted && requestId == _requestId) {
+        setState(() {
+          _remoteError = 'Không thể tải gợi ý AI lúc này.';
+          _remoteLoading = false;
+        });
+      }
+    }
   }
 
   @override
   Widget build(BuildContext context) {
     final state = context.read<AppState>();
+    final localPersonalized = _type == null
+        ? null
+        : const HealthProfileRecommender().recommend(
+            profile: state.healthProfile,
+            foods: state.foods,
+            mealType: _type!,
+            targetAgeGroup: _ageGroup,
+          );
+    final personalized =
+        _remoteSuggestion ??
+        (_remoteError == null && !_remoteLoading ? localPersonalized : null);
     final ageMatchedFoods = _type == null
         ? const <FoodItem>[]
         : filterFoodItems(
@@ -99,13 +168,66 @@ class _MealSuggestionSheetState extends State<MealSuggestionSheet> {
             ),
           ),
           _buildHeader(context),
-          _buildDate(context),
-          _buildAgeSelector(context),
-          _buildMealTypeSelector(),
-          if (_type != null) _buildSearchField(),
           if (_type != null && !hasAgeSpecificSuggestions)
             _buildGeneralCatalogWarning(context),
-          Expanded(child: _buildFoodList(context, foods, scrollController)),
+          Expanded(
+            child: ListView(
+              controller: scrollController,
+              padding: const EdgeInsets.fromLTRB(20, 0, 20, 20),
+              children: [
+                _buildDate(context),
+                _buildAgeSelector(context),
+                if (!state.healthProfile.isComplete)
+                  _buildProfilePrompt(context)
+                else if (personalized != null)
+                  _buildPersonalizedSuggestion(context, personalized),
+                if (_remoteLoading)
+                  const Padding(
+                    padding: EdgeInsets.only(bottom: 8),
+                    child: LinearProgressIndicator(),
+                  ),
+                if (_remoteError != null)
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: 8),
+                    child: Row(
+                      children: [
+                        Expanded(
+                          child: Text(
+                            _remoteError!,
+                            style: TextStyle(
+                              color: Theme.of(context).colorScheme.error,
+                            ),
+                          ),
+                        ),
+                        TextButton(
+                          onPressed: _loadRemoteSuggestion,
+                          child: const Text('Thử lại'),
+                        ),
+                      ],
+                    ),
+                  ),
+                _buildMealTypeSelector(),
+                if (_type != null) _buildSearchField(),
+                if (_type == null)
+                  const Center(child: Text('Hãy chọn loại bữa để xem món.'))
+                else if (foods.isEmpty)
+                  Center(
+                    child: Text(
+                      _query.trim().isEmpty
+                          ? 'Chưa có món trong danh mục này.'
+                          : 'Không tìm thấy món phù hợp.',
+                    ),
+                  )
+                else
+                  ...foods.map(
+                    (food) => Padding(
+                      padding: const EdgeInsets.only(bottom: 8),
+                      child: _buildFoodTile(food),
+                    ),
+                  ),
+              ],
+            ),
+          ),
           _buildBottomActions(context, selectedFoods),
         ],
       ),
@@ -181,7 +303,10 @@ class _MealSuggestionSheetState extends State<MealSuggestionSheet> {
             setState(() {
               _ageGroup = value;
               _selectedIds.clear();
+              _remoteSuggestion = null;
+              _remoteError = null;
             });
+            _loadRemoteSuggestion();
           },
         ),
         const SizedBox(height: 6),
@@ -215,13 +340,102 @@ class _MealSuggestionSheetState extends State<MealSuggestionSheet> {
           avatar: Icon(_iconFor(type), size: 18),
           label: Text(type.label),
           selected: _type == type,
-          onSelected: (_) => setState(() {
-            _type = type;
-            _query = '';
-            _selectedIds.clear();
-          }),
+          onSelected: (_) {
+            setState(() {
+              _type = type;
+              _query = '';
+              _selectedIds.clear();
+              _remoteSuggestion = null;
+              _remoteError = null;
+            });
+            _loadRemoteSuggestion();
+          },
         );
       },
+    ),
+  );
+
+  Widget _buildProfilePrompt(BuildContext context) => Padding(
+    padding: const EdgeInsets.fromLTRB(20, 4, 20, 4),
+    child: Card(
+      color: Theme.of(context).colorScheme.secondaryContainer,
+      child: ListTile(
+        leading: const Icon(Icons.person_outline),
+        title: const Text('Hoàn thiện hồ sơ để cá nhân hóa'),
+        subtitle: const Text(
+          'Bạn vẫn có thể dùng gợi ý chung theo danh mục và độ tuổi.',
+        ),
+        trailing: TextButton(
+          onPressed: () => context.push('/profile'),
+          child: const Text('Mở hồ sơ'),
+        ),
+      ),
+    ),
+  );
+
+  Widget _buildPersonalizedSuggestion(
+    BuildContext context,
+    PersonalizedMealSuggestion suggestion,
+  ) => Padding(
+    padding: const EdgeInsets.fromLTRB(20, 4, 20, 6),
+    child: Card(
+      color: Theme.of(context).colorScheme.primaryContainer,
+      child: Padding(
+        padding: const EdgeInsets.all(14),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              'GỢI Ý DÀNH RIÊNG CHO BẠN',
+              style: TextStyle(fontWeight: FontWeight.w800),
+            ),
+            const SizedBox(height: 8),
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                CircleAvatar(child: Text(suggestion.food.emoji)),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Text(
+                    suggestion.food.name,
+                    style: const TextStyle(fontWeight: FontWeight.w700),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 10),
+            const Text(
+              'Lý do phù hợp',
+              style: TextStyle(fontWeight: FontWeight.w700),
+            ),
+            ...suggestion.reasons.map((item) => _bullet(item)),
+            const SizedBox(height: 6),
+            const Text(
+              'Định hướng dinh dưỡng áp dụng',
+              style: TextStyle(fontWeight: FontWeight.w700),
+            ),
+            ...suggestion.principles.map((item) => _bullet(item)),
+            if (suggestion.alternatives.isNotEmpty) ...[
+              const SizedBox(height: 6),
+              Text(
+                'Gợi ý thay thế: ${suggestion.alternatives.map((item) => item.name).join(', ')}',
+                style: Theme.of(context).textTheme.bodySmall,
+              ),
+            ],
+          ],
+        ),
+      ),
+    ),
+  );
+
+  Widget _bullet(String text) => Padding(
+    padding: const EdgeInsets.only(top: 3),
+    child: Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Text('• '),
+        Expanded(child: Text(text)),
+      ],
     ),
   );
 
@@ -255,6 +469,34 @@ class _MealSuggestionSheetState extends State<MealSuggestionSheet> {
     ),
   );
 
+  Widget _buildFoodTile(FoodItem food) {
+    final selected = _selectedIds.contains(food.id);
+    return Card(
+      margin: EdgeInsets.zero,
+      child: CheckboxListTile(
+        value: selected,
+        onChanged: (_) => setState(() {
+          if (selected) {
+            _selectedIds.remove(food.id);
+          } else {
+            _selectedIds.add(food.id);
+          }
+        }),
+        secondary: CircleAvatar(child: Text(food.emoji)),
+        title: Text(food.name),
+        subtitle: Text(
+          food.description.isEmpty
+              ? food.categoryLabel
+              : '${food.categoryLabel} • ${food.description}',
+        ),
+        controlAffinity: ListTileControlAffinity.trailing,
+        contentPadding: const EdgeInsets.symmetric(horizontal: 12),
+      ),
+    );
+  }
+
+  // Kept as a small compatibility helper for callers from older feature code.
+  // ignore: unused_element
   Widget _buildFoodList(
     BuildContext context,
     List<FoodItem> foods,

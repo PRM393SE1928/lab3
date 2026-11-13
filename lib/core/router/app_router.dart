@@ -14,18 +14,21 @@ import '../../features/knowledge/screens/knowledge_screen.dart';
 import '../../features/knowledge/screens/article_detail_screen.dart';
 import '../../features/user_progress/screens/progress_screen.dart';
 import '../../features/user_progress/screens/profile_screen.dart';
+import '../../features/user_progress/screens/health_suggestions_screen.dart';
 import '../../features/user_progress/screens/settings_screen.dart';
 import '../../features/food_diary/models/meal.dart';
 import '../../features/knowledge/models/article.dart';
 import '../../shared/services/app_state.dart';
 import '../../features/meal_planner/screens/meal_planner_screen.dart';
+import '../../features/auth/screens/auth_screen.dart';
 
 class AppRouter {
-  static final router = GoRouter(
-    initialLocation: '/',
+  static GoRouter create({String initialLocation = '/'}) => GoRouter(
+    initialLocation: initialLocation,
     routes: [
       ShellRoute(
-        builder: (context, state, child) => AppShell(child: child),
+        builder: (_, state, child) =>
+            AppShell(location: state.uri.path, child: child),
         routes: [
           GoRoute(path: '/', builder: (_, _) => const HomeScreen()),
           GoRoute(path: '/diary', builder: (_, _) => const DiaryScreen()),
@@ -35,6 +38,7 @@ class AppRouter {
             path: '/planner',
             builder: (_, _) => const MealPlannerScreen(),
           ),
+          GoRoute(path: '/profile', builder: (_, _) => const ProfileScreen()),
         ],
       ),
       GoRoute(
@@ -60,8 +64,13 @@ class AppRouter {
       ),
       GoRoute(
         path: '/analyze-meal',
-        builder: (_, _) =>
-            MealPhotoAnalysisScreen(analyzer: configuredMealPhotoAnalyzer()),
+        builder: (_, state) {
+          final manual = state.uri.queryParameters['manual'] == 'true';
+          return MealPhotoAnalysisScreen(
+            analyzer: configuredMealPhotoAnalyzer(),
+            initialManualMode: manual,
+          );
+        },
       ),
       GoRoute(
         path: '/meal/:mealId',
@@ -99,8 +108,12 @@ class AppRouter {
           );
         },
       ),
-      GoRoute(path: '/profile', builder: (_, _) => const ProfileScreen()),
+      GoRoute(
+        path: '/health-suggestions',
+        builder: (_, _) => const HealthSuggestionsScreen(),
+      ),
       GoRoute(path: '/settings', builder: (_, _) => const SettingsScreen()),
+      GoRoute(path: '/auth', builder: (_, _) => const AuthScreen()),
       GoRoute(
         path: '/planner/edit',
         builder: (context, state) {
@@ -125,6 +138,8 @@ class AppRouter {
       ),
     ],
   );
+
+  static late GoRouter router;
 }
 
 class InvalidRouteScreen extends StatelessWidget {
@@ -154,24 +169,28 @@ class InvalidRouteScreen extends StatelessWidget {
 }
 
 class AppShell extends StatelessWidget {
-  const AppShell({super.key, required this.child});
+  const AppShell({super.key, required this.child, required this.location});
   final Widget child;
+  final String location;
+
   @override
   Widget build(BuildContext context) {
-    final location = GoRouterState.of(context).uri.path;
-    final index = [
+    const routes = [
       '/',
       '/diary',
       '/learn',
       '/progress',
       '/planner',
-    ].indexOf(location);
+      '/profile',
+    ];
+    final index = routes.indexOf(location);
     return Scaffold(
       body: child,
       bottomNavigationBar: NavigationBar(
         selectedIndex: index < 0 ? 0 : index,
-        onDestinationSelected: (i) =>
-            context.go(['/', '/diary', '/learn', '/progress', '/planner'][i]),
+        onDestinationSelected: (i) {
+          context.go(routes[i]);
+        },
         destinations: const [
           NavigationDestination(
             icon: Icon(Icons.home_outlined),
@@ -197,6 +216,11 @@ class AppShell extends StatelessWidget {
             icon: Icon(Icons.calendar_month_outlined),
             selectedIcon: Icon(Icons.calendar_month),
             label: 'Kế hoạch',
+          ),
+          NavigationDestination(
+            icon: Icon(Icons.person_outline),
+            selectedIcon: Icon(Icons.person),
+            label: 'Hồ sơ',
           ),
         ],
       ),

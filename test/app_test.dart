@@ -26,7 +26,7 @@ void main() {
     expect(find.text('Về trang chủ'), findsOneWidget);
   });
 
-  testWidgets('settings toggles are available', (tester) async {
+  testWidgets('unsupported notification settings are disabled', (tester) async {
     await tester.pumpWidget(const LongevaApp());
     AppRouter.router.go('/settings');
     await tester.pumpAndSettle();
@@ -35,7 +35,8 @@ void main() {
       find.byType(SwitchListTile),
     );
     expect(switches, hasLength(4));
-    expect(switches.every((item) => item.onChanged != null), isTrue);
+    expect(switches.take(3).every((item) => item.onChanged == null), isTrue);
+    expect(switches.last.onChanged, isNotNull);
     expect(find.text('Nhắc nhở hằng ngày'), findsOneWidget);
   });
 
@@ -53,6 +54,6 @@ void main() {
       find.text('Chưa có bữa ăn nào được ghi lại hôm nay.'),
       findsOneWidget,
     );
-    expect(find.text('Chưa có đánh giá'), findsOneWidget);
+    expect(find.text('Phân tích bằng AI khi bạn sẵn sàng'), findsOneWidget);
   });
 }

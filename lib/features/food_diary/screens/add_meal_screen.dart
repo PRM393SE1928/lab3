@@ -72,7 +72,7 @@ class _AddMealScreenState extends State<AddMealScreen> {
                 ? () => context.push('/analyze-meal')
                 : null,
             icon: const Icon(Icons.camera_alt_outlined),
-            label: const Text('Phân tích từ ảnh (Demo)'),
+            label: const Text('Phân tích bữa ăn bằng AI'),
           ),
           const SizedBox(height: 16),
           const Text(
